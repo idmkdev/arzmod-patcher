@@ -1,0 +1,6 @@
+# Ignore configuration file
+config.py
+
+# Ignore builds
+app-debug/
+app-debug.apk
