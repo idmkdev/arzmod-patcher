@@ -1,5 +1,7 @@
 # Ignore configuration file
 config.py
+arzmod_release.py
+key/keystore.jks
 
 # Ignore builds
 app-debug/
