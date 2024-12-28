@@ -10,13 +10,15 @@ import com.arzmod.radare.AppContext;
 import com.arizona.launcher.model.settings.SettingsConstants;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.arizona.game.GTASA;
+import com.arizona.game.BuildConfig;
+import com.arizona.launcher.util.UtilsKt;
 import ru.mrlargha.commonui.core.UIElementID;
 import androidx.preference.PreferenceManager;
 
 public class InitGamePatch {
     private static Context context;
     private static String CONNECT_TAG = "release";
-    private static String ACTUAL_VERSION = "v15.6.5";
+    private static String ACTUAL_VERSION = BuildConfig.VERSION_NAME;
 
     public static void firstTimePatches() {
         try {
@@ -28,6 +30,8 @@ public class InitGamePatch {
 
             SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
             GTASA.InitModloaderConfig(defaultSharedPreferences.getInt(SettingsPatch.MODLOADER_STATE, 0));
+
+            UtilsKt.initZip(context);
 
             Log.d("arzmod-initgame-module", "game started. by ARZMOD (arzmod.com) & Community (t.me/cleodis)");
         } catch (LinkageError e) {
