@@ -6,3 +6,7 @@ key/keystore.jks
 # Ignore builds
 app-debug/
 app-debug.apk
+
+# Ignore trash
+__pycache__/
+classes6/out/
