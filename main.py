@@ -1421,6 +1421,7 @@ def arzmod_patch():
     shutil.copy(working_dir + 'libpatch\\libluajit-5.1.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
     shutil.copy(working_dir + 'libpatch\\libmonetloader.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
     shutil.copy(working_dir + 'libpatch\\libAML.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
+    shutil.copy(working_dir + 'libpatch\\libsamp.so', working_dir + f'{name}/lib/armeabi-v7a/libsamp.so')
     shutil.rmtree(working_dir + f'{name}/lib/arm64-v8a/')
 
     if arzmod_dev:
