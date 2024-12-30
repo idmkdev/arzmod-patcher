@@ -47,17 +47,24 @@ end
 
 function sampev.onInitGame(_, hostName)
   local success, settings = pcall(cjson.decode, io.open(getGameDirectory().."/SAMP/settings.json"):read("*a"))
-  if success then serverName = ((settings.client.server.id == 0 and settings.client.server.serverid == 0) and hostName or "")
-  else serverName = "Unknown Server" end
-  local headers = {
-    ["accept"] = "*/*",
-    ["Upgrade-Insecure-Requests"] = "1"
-  }
-  httpRequest('POST', 'https://radarebot.hhos.net/api/setserver', {data={name=serverName}, headers=headers}, function(response, code, headers, status)
-    print(response.text)
-  end)
+  if success then 
+    if settings.client.server.id == 0 and (settings.client.server.serverid == 0 or settings.client.server.serverid == 1) then
+      serverName = ((settings.client.server.id == 0 and settings.client.server.serverid == 0) and hostName or "")
+      local headers = {
+        ["accept"] = "*/*",
+        ["Upgrade-Insecure-Requests"] = "1"
+      }
+      httpRequest('POST', 'https://radarebot.hhos.net/api/setserver', {data={name=serverName}, headers=headers}, function(response, code, headers, status)
+        print(response.text)
+      end)
+    end
+  end
 end
 
+function onReceiveRpc(id, bs)
+  if id == 96 then return false end 
+  if id == 57 then return false end 
+end
 
 -- function UDPRecieve(data)
 --   local success, data = pcall(cjson.decode, data)
