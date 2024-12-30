@@ -8,9 +8,6 @@ import shutil
 import requests
 import threading
 import subprocess
-import telebot
-from telebot import types
-import ftplib
 import mysql.connector
 import config
 import xml.etree.ElementTree as ET
@@ -43,7 +40,6 @@ headers = {
 
 
 if arzmod_dev:
-    bot = telebot.TeleBot(arzmod_release.TELEGRAM_BOT_TOKEN)
     print("Set MySQL timeout")
     db = arzmod_release.connect_to_db()
     cursor = db.cursor()
@@ -1480,7 +1476,7 @@ if __name__ == "__main__":
 
     if "-release" in sys.argv:
         if arzmod_dev:
-            arzmod_release.create_release()
+            arzmod_release.create_release(launcher_ver, launcher_vername, launcher_verlua, name, rename, working_dir, headers)
         else: print("why you use release tag, but you dont have release module?")
 
     print("Process completed successfully.")

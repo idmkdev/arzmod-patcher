@@ -61,8 +61,6 @@ public class InitGamePatch {
             SharedPreferences sharedPreferences = SettingsPatch.getSettingsPreferences();
             String notifyHash = sharedPreferences.getString(SettingsConstants.TOKEN, getUniqueID());
 
-            Log.d("arzmod-initgame-module", "arizona receive token: " + notifyHash);
-
             if (isMonetloaderWork) {
                 GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (isNewVersion ? ACTUAL_VERSION : "v15.1.2"), lastUIElementID, deviceInfo, notifyHash);
             } else {
