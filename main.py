@@ -4,12 +4,13 @@ import sys
 import time
 import json
 import yaml
+import config
 import shutil
+import zipfile
 import requests
 import threading
 import subprocess
 import mysql.connector
-import config
 import xml.etree.ElementTree as ET
 
 try:
@@ -100,6 +101,21 @@ def replace_files(base_path, name):
         print(f"Для {name} заменено файлов: {files_replaced}")
     else:
         print(f"Не было найдено файлов для замены {name}.")
+
+def add_asset(base_path):
+    asset_folder = app_dir + "\\assets"
+    armod_asset = asset_folder + "\\arzmod"
+    if not os.path.exists(asset_folder):
+        print("Ошибка: папка 'assets' не найдена.")
+        return
+
+    os.makedirs(armod_asset, exist_ok=True)
+
+    try:
+        shutil.copy(base_path, armod_asset)
+        print(f"Файл {base_path} успешно скопирован в assets/arzmod!")
+    except Exception as e:
+        raise RuntimeError(f"Произошла ошибка: {e}")
 
 
 def search_and_replace(file_path, search_string, replacement_string, skip_found=None):
@@ -433,10 +449,28 @@ def sign_apk(rename, keypass):
     os.remove(f"{aligned_apk}.idsig")
 
 def compile_dex_additions(dex_name):
-    run_command(f"dexcompile.py {dex_name}", cwd=patcher_dir)
+    run_command(f"python dexcompile.py {dex_name}", cwd=patcher_dir)
     shutil.move(f"{patcher_dir}\\{dex_name}\\out\\{dex_name}.dex", app_dir)
 
+def update_classes(apk_path):
+    if not os.path.isfile(apk_path):
+        print(f"Файл {apk_path} не найден.")
+        return
+
+    classes_dir = os.path.join(working_dir, 'arzmob-classes')
     
+    try:
+        with zipfile.ZipFile(apk_path, 'r') as apk:
+            for file in apk.namelist():
+                if file.startswith("classes") and file.endswith(".dex"):
+                    print(f"Извлекаем {file}...")
+                    apk.extract(file, classes_dir)
+        print(f"Все файлы classes*.dex извлечены в папку {classes_dir}.")
+        run_command(f"python dex2jar.py", cwd=classes_dir)
+    except zipfile.BadZipFile:
+        print("Ошибка: APK-файл поврежден или не является архивом ZIP.")
+        sys.exit(1)
+
 def download_apk(rename):
     aligned_apk = os.path.join(dist_dir, f"{rename}.apk")
     print(f"Installing APK ({aligned_apk}) on device...")
@@ -457,7 +491,6 @@ def run_command(command, cwd=None, check=True):
 
 
 def arzmod_patch():
-    compile_dex_additions("classes6")
     set_package_name("com.arizona21.game.web", "com.arizona.game")
 
     set_xml_string("gcm_defaultSenderId", "982519605362")
@@ -491,14 +524,11 @@ def arzmod_patch():
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\data\\database\\NotificationHistoryDAO_Impl$2.smali", "DELETE FROM notifications", "SELECT 1")    
     replace_code_between_lines(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\MessagingService.smali", "invoke-direct {p0}, Lcom/arizona/launcher/MessagingService;->getSettingsPreferences()Landroid/content/SharedPreferences;", "invoke-interface {v0}, Landroid/content/SharedPreferences$Editor;->apply()V", "")
 
-    insert_code_before_line(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASA.smali", ".method private native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", """.method public static native InitSetting(ZIZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V
-        .end method
-        """)
     insert_code_before_line(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASA.smali", ".method private native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", """.method public static native InitModloaderConfig(I)V
-        .end method
-        """)
-    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASA.smali", ".method private native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", ".method public static native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V")
-    
+        .end method""")
+
+    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASA.smali", ".method private native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", ".method public static native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V") 
+
     manifest_path = working_dir + f'{name}\\AndroidManifest.xml'
 
     tree = ET.parse(manifest_path)
@@ -523,45 +553,6 @@ def arzmod_patch():
     tree.write(manifest_path, encoding="utf-8", xml_declaration=True)
 
 
-    insert_code_before_line(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASA.smali", ".method public InstallHud(IIII)V", """.method public InstallHud(III)V
-        .locals 7
-        .annotation system Ldalvik/annotation/MethodParameters;
-            accessFlags = {
-                0x0,
-                0x0,
-                0x0,
-                0x0
-            }
-            names = {
-                "playerId",
-                "serverId",
-                "serverType",
-                "isStreamerMode"
-            }
-        .end annotation
-
-        .line 891
-        new-instance v6, Lcom/arizona/game/GTASA$$ExternalSyntheticLambda36;
-
-        move-object v0, v6
-
-        move-object v1, p0
-
-        move v2, p1
-
-        move v3, p2
-
-        move v4, p3
-
-        const/4 v5, 0x0
-
-        invoke-direct/range {v0 .. v5}, Lcom/arizona/game/GTASA$$ExternalSyntheticLambda36;-><init>(Lcom/arizona/game/GTASA;IIII)V
-
-        invoke-virtual {p0, v6}, Lcom/arizona/game/GTASA;->runOnUiThread(Ljava/lang/Runnable;)V
-
-        return-void
-    .end method
-        """)
 
     update_xml_attribute(working_dir + f"{name}\\res\\layout\\test_server_dialog.xml", "app", ".//com.google.android.material.textfield.TextInputLayout[@android:id='@id/textInputLayout3']", 'helperText', 'Никнейм')
     update_xml_attribute(working_dir + f"{name}\\res\\layout\\test_server_dialog.xml", "android", ".//com.google.android.material.textfield.TextInputEditText[@android:id='@id/server_password_input']", 'inputType', 'text')
@@ -591,527 +582,6 @@ def arzmod_patch():
     invoke-virtual {p3}, Lcom/arizona/launcher/MainViewModel;->getPlayerNick()Ljava/lang/String;
 
     move-result-object p3""", "")
-
-    replace_code_between_lines(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\ui\\servers\\ServerInfoActivity.smali", ".method private final startGame(Lcom/arizona/launcher/model/servers/SAMPServerInfo;)V", ".end method", """.method private final startGame(Lcom/arizona/launcher/model/servers/SAMPServerInfo;)V
-        .locals 10
-
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getServerType()Lcom/arizona/launcher/model/servers/ServerType;
-
-        move-result-object v0
-
-        invoke-virtual {v0}, Lcom/arizona/launcher/model/servers/ServerType;->getComingSoon()Z
-
-        move-result v0
-
-        const/4 v1, 0x0
-
-        if-eqz v0, :cond_0
-
-        new-instance p1, Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;
-
-        move-object v0, p0
-
-        check-cast v0, Landroid/content/Context;
-
-        invoke-direct {p1, v0}, Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;-><init>(Landroid/content/Context;)V
-
-        const-string/jumbo v0, "\u041f\u043e\u043a\u0430 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e"
-
-        check-cast v0, Ljava/lang/CharSequence;
-
-        invoke-virtual {p1, v0}, Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;->setTitle(Ljava/lang/CharSequence;)Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;
-
-        move-result-object p1
-
-        const-string v0, "Coming soon..."
-
-        check-cast v0, Ljava/lang/CharSequence;
-
-        invoke-virtual {p1, v0}, Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;->setMessage(Ljava/lang/CharSequence;)Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;
-
-        move-result-object p1
-
-        sget v0, Lcom/arizona/game/R$string;->ok:I
-
-        new-instance v2, Lcom/arizona/launcher/ui/servers/ServerInfoActivity$$ExternalSyntheticLambda6;
-
-        invoke-direct {v2, p0}, Lcom/arizona/launcher/ui/servers/ServerInfoActivity$$ExternalSyntheticLambda6;-><init>(Lcom/arizona/launcher/ui/servers/ServerInfoActivity;)V
-
-        invoke-virtual {p1, v0, v2}, Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;->setPositiveButton(ILandroid/content/DialogInterface$OnClickListener;)Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;
-
-        move-result-object p1
-
-        invoke-virtual {p1, v1}, Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;->setCancelable(Z)Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;
-
-        move-result-object p1
-
-        invoke-virtual {p1}, Lcom/google/android/material/dialog/MaterialAlertDialogBuilder;->show()Landroidx/appcompat/app/AlertDialog;
-
-        return-void
-
-        :cond_0
-        move-object v0, p0
-
-        check-cast v0, Landroid/content/Context;
-
-        invoke-static {v0}, Landroidx/preference/PreferenceManager;->getDefaultSharedPreferences(Landroid/content/Context;)Landroid/content/SharedPreferences;
-
-        move-result-object v2
-
-        invoke-direct {p0}, Lcom/arizona/launcher/ui/servers/ServerInfoActivity;->getMainViewModel()Lcom/arizona/launcher/MainViewModel;
-
-        move-result-object v3
-
-        invoke-virtual {v3, p1}, Lcom/arizona/launcher/MainViewModel;->addServerToLastPlayed(Lcom/arizona/launcher/model/servers/SAMPServerInfo;)V
-
-        new-instance v3, Ljava/io/File;
-
-        invoke-static {}, Landroid/os/Environment;->getExternalStorageDirectory()Ljava/io/File;
-
-        move-result-object v4
-
-        const-string v5, "Android/data/com.arizona21.game.web/files/SAMP/"
-
-        invoke-direct {v3, v4, v5}, Ljava/io/File;-><init>(Ljava/io/File;Ljava/lang/String;)V
-
-        invoke-virtual {v3}, Ljava/io/File;->mkdirs()Z
-
-        new-instance v3, Ljava/io/File;
-
-        invoke-static {}, Landroid/os/Environment;->getExternalStorageDirectory()Ljava/io/File;
-
-        move-result-object v4
-
-        const-string v5, "Android/data/com.arizona21.game.web/files/SAMP/settings.json"
-
-        invoke-direct {v3, v4, v5}, Ljava/io/File;-><init>(Ljava/io/File;Ljava/lang/String;)V
-
-        invoke-virtual {v3}, Ljava/io/File;->exists()Z
-
-        move-result v4
-
-        if-eqz v4, :cond_1
-
-        invoke-virtual {v3}, Ljava/io/File;->delete()Z
-
-        :cond_1
-        :try_start_0
-        invoke-virtual {v3}, Ljava/io/File;->createNewFile()Z
-        :try_end_0
-        .catch Ljava/io/IOException; {:try_start_0 .. :try_end_0} :catch_0
-
-        goto :goto_0
-
-        :catch_0
-        move-exception v4
-
-        invoke-virtual {v4}, Ljava/io/IOException;->printStackTrace()V
-
-        :goto_0
-        new-instance v4, Ljava/io/BufferedWriter;
-
-        new-instance v5, Ljava/io/FileWriter;
-
-        invoke-direct {v5, v3}, Ljava/io/FileWriter;-><init>(Ljava/io/File;)V
-
-        check-cast v5, Ljava/io/Writer;
-
-        invoke-direct {v4, v5}, Ljava/io/BufferedWriter;-><init>(Ljava/io/Writer;)V
-
-        check-cast v4, Ljava/io/Writer;
-        
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getId()I
-
-        move-result v7
-        
-        const/16 v8, 0x1e
-        
-        new-instance v3, Lorg/json/JSONObject;
-
-        invoke-direct {v3}, Lorg/json/JSONObject;-><init>()V
-
-        new-instance v5, Lorg/json/JSONObject;
-
-        invoke-direct {v5}, Lorg/json/JSONObject;-><init>()V
-        
-        if-le v7, v8, :cond_8
-        
-        new-instance v6, Lorg/json/JSONObject;
-
-        invoke-direct {v6}, Lorg/json/JSONObject;-><init>()V
-
-        const/4 v7, 0x0
-
-        const-string v8, "id"
-
-        invoke-virtual {v6, v8, v7}, Lorg/json/JSONObject;->put(Ljava/lang/String;I)Lorg/json/JSONObject;
-
-        move-result-object v6
-
-        const-string/jumbo v7, "serverid"
-
-        const/4 v8, 0x0
-
-        invoke-virtual {v6, v7, v8}, Lorg/json/JSONObject;->put(Ljava/lang/String;I)Lorg/json/JSONObject;
-
-        move-result-object v6
-        
-        new-instance v8, Lorg/json/JSONObject;
-
-        invoke-direct {v8}, Lorg/json/JSONObject;-><init>()V
-        
-        const-string v7, "ip"
-        
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getAddress()Ljava/net/InetAddress;
-
-        move-result-object v9
-
-        invoke-virtual {v9}, Ljava/net/InetAddress;->getHostAddress()Ljava/lang/String;
-
-        move-result-object v9
-
-        invoke-virtual {v8, v7, v9}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v8
-
-        const-string v7, "port"
-        
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getPort()I
-
-        move-result v9
-
-        invoke-virtual {v8, v7, v9}, Lorg/json/JSONObject;->put(Ljava/lang/String;I)Lorg/json/JSONObject;
-
-        move-result-object v8
-
-        const-string v7, "test"
-
-        invoke-virtual {v5, v7, v8}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v5
-        
-        const-string/jumbo v7, "server"
-
-        invoke-virtual {v5, v7, v6}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v5
-       
-
-        const-string v6, "client"
-
-        invoke-virtual {v3, v6, v5}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v3
-        
-        
-        goto :cond_9
-         
-        :cond_8
-        
-        new-instance v6, Lorg/json/JSONObject;
-
-        invoke-direct {v6}, Lorg/json/JSONObject;-><init>()V
-
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getServerType()Lcom/arizona/launcher/model/servers/ServerType;
-
-        move-result-object v7
-
-        invoke-virtual {v7}, Lcom/arizona/launcher/model/servers/ServerType;->getBackendLaunchCode()I
-
-        move-result v7
-
-        const-string v8, "id"
-
-        invoke-virtual {v6, v8, v7}, Lorg/json/JSONObject;->put(Ljava/lang/String;I)Lorg/json/JSONObject;
-
-        move-result-object v6
-
-        const-string/jumbo v7, "serverid"
-
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getId()I
-
-        move-result v8
-
-        invoke-virtual {v6, v7, v8}, Lorg/json/JSONObject;->put(Ljava/lang/String;I)Lorg/json/JSONObject;
-
-        move-result-object v6
-
-        const-string/jumbo v7, "server"
-
-        invoke-virtual {v5, v7, v6}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v5
-        
-
-        const-string v6, "client"
-
-        invoke-virtual {v3, v6, v5}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v3
-        
-        :cond_9
-
-        new-instance v5, Lorg/json/JSONObject;
-
-        invoke-direct {v5}, Lorg/json/JSONObject;-><init>()V
-        
-
-        invoke-direct {p0}, Lcom/arizona/launcher/ui/servers/ServerInfoActivity;->getMainViewModel()Lcom/arizona/launcher/MainViewModel;
-
-        move-result-object v6
-
-        invoke-virtual {v6}, Lcom/arizona/launcher/MainViewModel;->getPlayerNick()Ljava/lang/String;
-
-        move-result-object v6
-
-        const-string v7, "nickname"
-
-        invoke-virtual {v5, v7, v6}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v5
-
-        const-string v6, "chat_pagesize"
-
-        const/4 v7, 0x0
-
-        if-eqz v2, :cond_2
-
-        const/4 v8, 0x1
-
-        invoke-interface {v2, v6, v8}, Landroid/content/SharedPreferences;->getInt(Ljava/lang/String;I)I
-
-        move-result v8
-
-        invoke-static {v8}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
-
-        move-result-object v8
-
-        goto :goto_1
-
-        :cond_2
-        move-object v8, v7
-
-        :goto_1
-        invoke-virtual {v5, v6, v8}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v5
-
-        const-string v6, "chat_fontsize"
-
-        if-eqz v2, :cond_3
-
-        const/4 v8, 0x2
-
-        invoke-interface {v2, v6, v8}, Landroid/content/SharedPreferences;->getInt(Ljava/lang/String;I)I
-
-        move-result v8
-
-        invoke-static {v8}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
-
-        move-result-object v8
-
-        goto :goto_2
-
-        :cond_3
-        move-object v8, v7
-
-        :goto_2
-        invoke-virtual {v5, v6, v8}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v5
-
-        const-string v6, "chat_print_timestamp"
-
-        if-eqz v2, :cond_4
-
-        invoke-interface {v2, v6, v1}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
-
-        move-result v8
-
-        invoke-static {v8}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
-
-        move-result-object v8
-
-        goto :goto_3
-
-        :cond_4
-        move-object v8, v7
-
-        :goto_3
-        invoke-virtual {v5, v6, v8}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v5
-
-        const-string v6, "head_moving"
-
-        if-eqz v2, :cond_5
-
-        invoke-interface {v2, v6, v1}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
-
-        move-result v2
-
-        invoke-static {v2}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
-
-        move-result-object v7
-
-        :cond_5
-        invoke-virtual {v5, v6, v7}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v2
-
-        const-string v5, "launcher"
-
-        invoke-virtual {v3, v5, v2}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
-
-        move-result-object v2
-
-        :try_start_1
-        move-object v3, v4
-        
-        check-cast v3, Ljava/io/BufferedWriter;
-
-        invoke-virtual {v2}, Lorg/json/JSONObject;->toString()Ljava/lang/String;
-
-        move-result-object v2
-
-        invoke-virtual {v3, v2}, Ljava/io/BufferedWriter;->write(Ljava/lang/String;)V
-
-        check-cast v4, Ljava/io/BufferedWriter;
-
-        invoke-virtual {v4}, Ljava/io/BufferedWriter;->close()V
-        :try_end_1
-        .catch Ljava/lang/Exception; {:try_start_1 .. :try_end_1} :catch_1
-
-        goto :goto_4
-
-        :catch_1
-        move-exception v2
-
-        invoke-virtual {v2}, Ljava/lang/Exception;->printStackTrace()V
-
-        const-string v2, "ServerInfoActivity"
-
-        const-string/jumbo v3, "write failed: ENOSPC (No space left on device)"
-
-        invoke-static {v2, v3}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;)I
-
-        :goto_4
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getServerType()Lcom/arizona/launcher/model/servers/ServerType;
-
-        move-result-object v2
-
-        sget-object v3, Lcom/arizona/launcher/model/servers/ServerType;->ARIZONA_MOBILE:Lcom/arizona/launcher/model/servers/ServerType;
-
-        if-eq v2, v3, :cond_6
-
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getServerType()Lcom/arizona/launcher/model/servers/ServerType;
-
-        move-result-object v2
-
-        sget-object v3, Lcom/arizona/launcher/model/servers/ServerType;->RODINA:Lcom/arizona/launcher/model/servers/ServerType;
-
-        if-eq v2, v3, :cond_6
-
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getServerType()Lcom/arizona/launcher/model/servers/ServerType;
-
-        move-result-object v2
-
-        sget-object v3, Lcom/arizona/launcher/model/servers/ServerType;->RODINA_MOBILE:Lcom/arizona/launcher/model/servers/ServerType;
-
-        if-ne v2, v3, :cond_7
-
-        :cond_6
-        invoke-virtual {p0}, Lcom/arizona/launcher/ui/servers/ServerInfoActivity;->getApplicationContext()Landroid/content/Context;
-
-        move-result-object v2
-
-        invoke-static {v2}, Lcom/android/volley/toolbox/Volley;->newRequestQueue(Landroid/content/Context;)Lcom/android/volley/RequestQueue;
-
-        move-result-object v2
-
-        const-string v3, "newRequestQueue(...)"
-
-        invoke-static {v2, v3}, Lkotlin/jvm/internal/Intrinsics;->checkNotNullExpressionValue(Ljava/lang/Object;Ljava/lang/String;)V
-
-        sget-object v3, Lkotlin/random/Random;->Default:Lkotlin/random/Random$Default;
-
-        const/4 v4, 0x3
-
-        const/4 v5, 0x6
-
-        invoke-virtual {v3, v4, v5}, Lkotlin/random/Random$Default;->nextInt(II)I
-
-        move-result v3
-
-        move v4, v1
-
-        :goto_5
-        if-ge v4, v3, :cond_7
-
-        new-instance v5, Lcom/android/volley/toolbox/StringRequest;
-
-        invoke-virtual {p1}, Lcom/arizona/launcher/model/servers/SAMPServerInfo;->getAddress()Ljava/net/InetAddress;
-
-        move-result-object v6
-
-        new-instance v7, Ljava/lang/StringBuilder;
-
-        const-string v8, "http://"
-
-        invoke-direct {v7, v8}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
-
-        invoke-virtual {v7, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/Object;)Ljava/lang/StringBuilder;
-
-        const-string v6, "/"
-
-        invoke-virtual {v7, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
-
-        invoke-virtual {v7}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
-
-        move-result-object v6
-
-        new-instance v7, Lcom/arizona/launcher/ui/servers/ServerInfoActivity$$ExternalSyntheticLambda7;
-
-        invoke-direct {v7}, Lcom/arizona/launcher/ui/servers/ServerInfoActivity$$ExternalSyntheticLambda7;-><init>()V
-
-        new-instance v8, Lcom/arizona/launcher/ui/servers/ServerInfoActivity$$ExternalSyntheticLambda8;
-
-        invoke-direct {v8}, Lcom/arizona/launcher/ui/servers/ServerInfoActivity$$ExternalSyntheticLambda8;-><init>()V
-
-        invoke-direct {v5, v1, v6, v7, v8}, Lcom/android/volley/toolbox/StringRequest;-><init>(ILjava/lang/String;Lcom/android/volley/Response$Listener;Lcom/android/volley/Response$ErrorListener;)V
-
-        check-cast v5, Lcom/android/volley/Request;
-
-        invoke-virtual {v2, v5}, Lcom/android/volley/RequestQueue;->add(Lcom/android/volley/Request;)Lcom/android/volley/Request;
-
-        const-wide/16 v5, 0x12c
-
-        invoke-static {v5, v6}, Ljava/lang/Thread;->sleep(J)V
-
-        add-int/lit8 v4, v4, 0x1
-
-        goto :goto_5
-
-        :cond_7
-        invoke-direct {p0}, Lcom/arizona/launcher/ui/servers/ServerInfoActivity;->getMainViewModel()Lcom/arizona/launcher/MainViewModel;
-
-        move-result-object p1
-
-        invoke-virtual {p1}, Lcom/arizona/launcher/MainViewModel;->setNotFirstRun()V
-
-        new-instance p1, Landroid/content/Intent;
-
-        const-class v1, Lcom/arizona/game/GTASA;
-
-        invoke-direct {p1, v0, v1}, Landroid/content/Intent;-><init>(Landroid/content/Context;Ljava/lang/Class;)V
-
-        iget-object v0, p0, Lcom/arizona/launcher/ui/servers/ServerInfoActivity;->launchGTASA:Landroidx/activity/result/ActivityResultLauncher;
-
-        invoke-virtual {v0, p1}, Landroidx/activity/result/ActivityResultLauncher;->launch(Ljava/lang/Object;)V
-
-        return-void
-    .end method
-    """.replace("com.arizona21.game.web", "com.arizona.game"))
 
 
     search_and_replace_after(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\MainActivity.smali", ".method protected onCreate", "return-void","""    invoke-virtual {p0}, Lcom/arizona/launcher/MainActivity;->fixLoadBG()Ljava/lang/String;
@@ -1410,6 +880,7 @@ def arzmod_patch():
 
     replace_files(working_dir + "resource\\ic_chat_hello", "launcher_donate_arz_ic")
     replace_files(working_dir + "resource\\launcher_donate_bg_svg", "launcher_donate_bg_svg")
+    add_asset(working_dir + "resource\\profile.json")
 
 
     shutil.copy(working_dir + f'{name}/lib/armeabi-v7a/libsamp.so', working_dir + f'{name}/lib/armeabi-v7a/libsampv.so')
@@ -1417,7 +888,10 @@ def arzmod_patch():
     shutil.copy(working_dir + 'libpatch\\libluajit-5.1.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
     shutil.copy(working_dir + 'libpatch\\libmonetloader.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
     shutil.copy(working_dir + 'libpatch\\libAML.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
-    shutil.copy(working_dir + 'libpatch\\libsamp.so', working_dir + f'{name}/lib/armeabi-v7a/libsamp.so')
+    if os.path.exists(working_dir + 'libpatch\\libsamp.so'):
+        shutil.copy(working_dir + 'libpatch\\libsamp.so', working_dir + f'{name}\\lib\\armeabi-v7a\\libsamp.so')
+    else:
+        print("using the latest version of libsamp.so!!")
     shutil.rmtree(working_dir + f'{name}/lib/arm64-v8a/')
 
     if arzmod_dev:
@@ -1434,6 +908,10 @@ def arzmod_patch():
 
         cursor.close()
         db.close()
+
+    build_apk()
+    update_classes(working_dir + f"\\{name}\\dist\\{name}.apk")
+    compile_dex_additions("classes6")
 
 def set_version(version, need):
     print(f"Set update version from {version} to {need}")

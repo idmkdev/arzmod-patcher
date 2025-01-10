@@ -4,6 +4,7 @@ arzmod_release.py
 key/keystore.jks
 
 # Ignore builds
+arzmob-classes/*.jar
 app-debug/
 app-debug.apk
 
