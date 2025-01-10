@@ -8,14 +8,12 @@ def compile_to_dex(src_dir):
     project_name = os.path.basename(os.path.normpath(src_dir))
     current_directory = os.getcwd()
 
-    classpath = (
-        f"{os.path.join(current_directory, 'arzmob-classes', 'android.jar')};"
-        f"{os.path.join(current_directory, 'arzmob-classes', 'classes-dex2jar.jar')};"
-        f"{os.path.join(current_directory, 'arzmob-classes', 'classes2-dex2jar.jar')};"
-        f"{os.path.join(current_directory, 'arzmob-classes', 'classes3-dex2jar.jar')};"
-        f"{os.path.join(current_directory, 'arzmob-classes', 'classes4-dex2jar.jar')};"
-        f"{os.path.join(current_directory, 'arzmob-classes', 'classes5-dex2jar.jar')}"
-    )
+    classes_dir = os.path.join(current_directory, 'arzmob-classes')
+
+    jar_files = [os.path.join(classes_dir, f) for f in os.listdir(classes_dir) if f.endswith('.jar')]
+    
+    classpath = ";".join(jar_files)
+
     out_dir = src_dir + "\\out"
     dex_file = os.path.join(out_dir, f"{project_name}.dex")
 

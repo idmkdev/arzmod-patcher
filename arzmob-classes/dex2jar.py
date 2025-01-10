@@ -11,7 +11,7 @@ for root, dirs, files in os.walk(dex_folder):
             dex_file = os.path.join(root, file)
             jar_file = dex_file.replace(".dex", ".jar")
             
-            subprocess.run([dex2jar_path, dex_file], check=True)
+            subprocess.run([dex2jar_path, dex_file, "--force"], check=True)
             
             os.remove(dex_file)
             print(f"Конвертирован и удален файл: {dex_file}")

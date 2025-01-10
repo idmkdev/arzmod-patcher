@@ -1,8 +1,13 @@
 package com.arzmod.radare;
 
 import android.os.Build;
+import android.os.Environment;
 import android.util.Log;
 import java.util.UUID;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import android.content.Context;
 import android.content.SharedPreferences;
 import com.arzmod.radare.SettingsPatch;
@@ -20,12 +25,45 @@ public class InitGamePatch {
     private static String CONNECT_TAG = "release";
     private static String ACTUAL_VERSION = BuildConfig.VERSION_NAME;
 
+    public static void copyFileFromAssets(Context context, String fileName, String outputPath) throws IOException {
+        InputStream inputStream = context.getAssets().open("arzmod/" + fileName);
+
+        File outFile = new File(outputPath + "/" + fileName);
+
+        File parentDir = outFile.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            if (!parentDir.mkdirs()) {
+                throw new IOException("Не удалось создать директории: " + parentDir.getAbsolutePath());
+            }
+        }
+
+        try (FileOutputStream outputStream = new FileOutputStream(outFile)) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, length);
+            }
+        } finally {
+            inputStream.close();
+        }
+    }
+
     public static void firstTimePatches() {
         try {
             context = AppContext.getContext();
             if (context == null) {
                 Log.e("arzmod-initgame-module", "Context is null (firstTimePatches)");
                 return;
+            }
+
+            String packageName = context.getPackageName();
+
+            try {
+                String outputPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat";
+                copyFileFromAssets(context, "profile.json", outputPath);
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e("arzmod-initgame-module", "Ошибка при копировании файла: " + e.getMessage());
             }
 
             SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
@@ -61,11 +99,7 @@ public class InitGamePatch {
             SharedPreferences sharedPreferences = SettingsPatch.getSettingsPreferences();
             String notifyHash = sharedPreferences.getString(SettingsConstants.TOKEN, getUniqueID());
 
-            if (isMonetloaderWork) {
-                GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (isNewVersion ? ACTUAL_VERSION : "v15.1.2"), lastUIElementID, deviceInfo, notifyHash);
-            } else {
-                GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, isStreamerMode, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + ACTUAL_VERSION, lastUIElementID, deviceInfo, notifyHash);
-            }
+            GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, isStreamerMode, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + ACTUAL_VERSION, lastUIElementID, deviceInfo, notifyHash);
             
             
             FirebaseCrashlytics.getInstance().setUserId(getUniqueID());
