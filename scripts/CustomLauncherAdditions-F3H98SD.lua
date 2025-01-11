@@ -61,10 +61,6 @@ function sampev.onInitGame(_, hostName)
   end
 end
 
-function onReceiveRpc(id, bs)
-  if id == 96 then return false end 
-  if id == 57 then return false end 
-end
 
 -- function UDPRecieve(data)
 --   local success, data = pcall(cjson.decode, data)
