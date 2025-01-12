@@ -6,7 +6,7 @@ key/keystore.jks
 # Ignore builds
 arzmob-classes/*.jar
 app-debug/
-app-debug.apk
+*.apk
 
 # Ignore trash
 __pycache__/

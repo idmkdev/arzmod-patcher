@@ -24,18 +24,16 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 working_dir = os.getcwd() + "\\"
 patcher_dir = os.getcwd()
 name = "app"
-app_dir, res_folder, dist_dir, lib_path = None, None, None, None
+app_dir, res_folder, dist_dir, lib_path, project, usearm64 = None, None, None, None, 0, False
 launcher_verlua, launcher_ver, launcher_vername = 0, 0, "None"
 arz_src_path = "smali_classes3"
 arz_ui_path = "smali_classes5"
 
+ARIZONA_MOBILE = 0
+RODINA_MOBILE = 1
+
 print("Connect MySQL's")
 
-headers = {
-    'accept': '*/*',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0',
-    'Upgrade-Insecure-Requests': '1',
-}
 
 
 
@@ -102,9 +100,18 @@ def replace_files(base_path, name):
     else:
         print(f"Не было найдено файлов для замены {name}.")
 
+def add_patched_lib(libname, arch):
+    patched_lib = os.path.join(working_dir + 'libpatch', arch, libname)
+    if os.path.exists(patched_lib):
+        shutil.copy(patched_lib, os.path.join(app_dir, "lib", arch, libname))
+        print(f"Библиотека {libname} для {arch} успешно копирована!")
+    else:
+        print(f"Библиотеки {libname} для копирования не найдено в libpatch. Используется исходная версия")
+
 def add_asset(base_path):
-    asset_folder = app_dir + "\\assets"
-    armod_asset = asset_folder + "\\arzmod"
+    asset_folder = os.path.join(app_dir, "assets")
+    armod_asset = os.path.join(asset_folder, "arzmod")
+
     if not os.path.exists(asset_folder):
         print("Ошибка: папка 'assets' не найдена.")
         return
@@ -112,10 +119,39 @@ def add_asset(base_path):
     os.makedirs(armod_asset, exist_ok=True)
 
     try:
-        shutil.copy(base_path, armod_asset)
-        print(f"Файл {base_path} успешно скопирован в assets/arzmod!")
+        if os.path.isdir(base_path):
+            destination_path = os.path.join(armod_asset, os.path.basename(base_path))
+            shutil.copytree(base_path, destination_path, dirs_exist_ok=True)
+            print(f"Папка {base_path} успешно скопирована в {armod_asset}!")
+        elif os.path.isfile(base_path):
+            shutil.copy(base_path, armod_asset)
+            print(f"Файл {base_path} успешно скопирован в {armod_asset}!")
+        else:
+            print(f"Ошибка: путь {base_path} не существует или недоступен.")
     except Exception as e:
         raise RuntimeError(f"Произошла ошибка: {e}")
+
+
+def delete_lines(file_path, substring):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+
+        filtered_lines = [line for line in lines if substring not in line]
+
+        removed_count = len(lines) - len(filtered_lines)
+
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.writelines(filtered_lines)
+        
+        print(f"Удалено строк: {removed_count}")
+    except Exception as e:
+        print("-------------------DEBUG-------------------")
+        print("file_path:", file_path)
+        print("substring:", substring)
+        print(f"Ошибка: {e}")
+        print("-------------------------------------------")
+        exit()
 
 
 def search_and_replace(file_path, search_string, replacement_string, skip_found=None):
@@ -491,7 +527,8 @@ def run_command(command, cwd=None, check=True):
 
 
 def arzmod_patch():
-    set_package_name("com.arizona21.game.web", "com.arizona.game")
+    package_name = "com.arizona.game" if project == ARIZONA_MOBILE else "com.rodina.game"
+    set_package_name("com.arizona21.game.web" if project == ARIZONA_MOBILE else "com.rodina21.game.web", package_name)
 
     set_xml_string("gcm_defaultSenderId", "982519605362")
     set_xml_string("google_api_key", "AIzaSyAIav21gmzddU7GlZL-4oodtbAzkzclCmg")
@@ -504,21 +541,29 @@ def arzmod_patch():
     set_xml_string("update_server_error", "Лаунчеру не удалось получить нужную ему информацию. Возможно, сервера ARZMOD временно недоступны\\nЕсли с вашем интернет соединением всё хорошо, нажмите кнопку \\'продолжить\\'\\nЕсли у вас остались вопросы, напишите в группу - t.me/cleodis")
     set_xml_string("exit", "Продолжить")
     set_xml_string("need_restart", "Требуется перезапуск. После перезапуска, обновите игру для корректной работы.")
-    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\util\\FileServers.smali", "https://mob.maz-ins.com/game/release/", "https://download.arzmod.com/arz_modclient/")
-    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\util\\FileServers.smali", "https://arz-mob.react-group.tech/game/release/", "https://radarebot.hhos.net/arz_modclient/")
+    if project == ARIZONA_MOBILE:
+        search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\util\\FileServers.smali", "https://mob.maz-ins.com/game/release/", "https://download.arzmod.com/arz_modclient/")
+        search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\util\\FileServers.smali", "https://arz-mob.react-group.tech/game/release/", "https://radarebot.hhos.net/arz_modclient/")
+    elif project == RODINA_MOBILE:
+        search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\util\\FileServers.smali", "https://mob.azinternal.com/release/", "https://download.arzmod.com/rod_modclient/")
+        search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\util\\FileServers.smali", "https://rod-mob.react-group.tech/release/", "https://radarebot.hhos.net/rod_modclient/")
+    else:
+        print("project == null?")
+        exit()
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\di\\ArizonaLauncherAPIModule.smali", "https://api.arizona-five.com/", "https://api.arzmod.com/")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\MainEntrench$IncomingHandler.smali", "invoke-static {p0, p1, p2}, Lcom/arizona/launcher/MainEntrench$IncomingHandler;->handleMessage$lambda$14$lambda$12(Lcom/arizona/launcher/MainEntrench;Landroid/content/DialogInterface;I)V", "invoke-static {p0, p1, p2}, Lcom/arizona/launcher/MainEntrench$IncomingHandler;->handleMessage$lambda$14$lambda$13(Lcom/arizona/launcher/MainEntrench;Landroid/content/DialogInterface;I)V")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\MainEntrench$IncomingHandler.smali", "invoke-static {p0, p1, p2}, Lcom/arizona/launcher/MainEntrench$IncomingHandler;->handleMessage$lambda$1(Lcom/arizona/launcher/MainEntrench;Landroid/content/DialogInterface;I)V", "invoke-static {p0, p1, p2}, Lcom/arizona/launcher/MainEntrench$IncomingHandler;->handleMessage$lambda$14$lambda$13(Lcom/arizona/launcher/MainEntrench;Landroid/content/DialogInterface;I)V")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\MainEntrench.smali", " release_web\"", " arzmod\"")
-    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\UpdateService.smali", "/data/com.arizona.game/files", "")
-    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\UpdateService.smali", "/data/com.arizona.game", "")
-    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\UpdateService$isAllFilesOk$1.smali", "/data/com.arizona.game/files", "")
+    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\UpdateService.smali", f"/data/{package_name}/files", "")
+    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\UpdateService.smali", f"/data/{package_name}", "")
+    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\UpdateService$isAllFilesOk$1.smali", f"/data/{package_name}/files", "")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\UpdateService$isAllFilesOk$1.smali", "iget-boolean v6, p0, Lcom/arizona/launcher/UpdateService$isAllFilesOk$1;->$purgeExtraFiles:Z", "const/4 v6, 0x0")
-    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com/arizona\\launcher\\ui\\information_main\\InformationPageFragment.smali", "https://arizona-rp.com/shop", "https://t.me/cleodis")
+    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com/arizona\\launcher\\ui\\information_main\\InformationPageFragment.smali", "https://arizona-rp.com/shop" if project == ARIZONA_MOBILE else "https://rodina-rp.com/shop", "https://t.me/cleodis")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com/arizona\\launcher\\ui\\settings\\SettingsPageFragment.smali", "135.181.129.36", "join.arzfun.com")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\ui\\settings\\SettingsPageFragment.smali", "invoke-virtual {v0, v1}, Landroid/widget/ImageView;->setVisibility(I)V", "")
-    search_and_replace(working_dir + f"{name}\\{arz_ui_path}\\ru\\mrlargha\\commonui\\elements\\hud\\presentation\\Hud.smali", "arizona-rp.com", "arzmod.com")
-    search_and_replace(working_dir + f"{name}\\{arz_ui_path}\\ru\\mrlargha\\commonui\\elements\\hud\\presentation\\api\\HudApi.smali", "desktop/ping/Arizona/ping.json", "https://radarebot.hhos.net/api/serverlist")
+    search_and_replace(working_dir + f"{name}\\{arz_ui_path}\\ru\\mrlargha\\commonui\\elements\\hud\\presentation\\Hud.smali", "arizona-rp.com" if project == ARIZONA_MOBILE else "rodina-rp.com", "arzmod.com")
+    if project == ARIZONA_MOBILE:
+        search_and_replace(working_dir + f"{name}\\{arz_ui_path}\\ru\\mrlargha\\commonui\\elements\\hud\\presentation\\api\\HudApi.smali", "desktop/ping/Arizona/ping.json", "https://radarebot.hhos.net/api/serverlist")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\data\\database\\NotificationHistoryDAO_Impl.smali", "SELECT * FROM notifications ORDER BY date LIMIT 5", "SELECT * FROM notifications ORDER BY id DESC")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\data\\database\\NotificationHistoryDAO_Impl$1.smali", "INSERT OR REPLACE INTO `notifications` (`id`,`date`,`title`,`text`,`imageUrl`) VALUES (nullif(?, 0),?,?,?,?)", "WITH Params AS (SELECT ? AS id, ? AS date, ? AS title, ? AS text, ? AS imageUrl) INSERT INTO notifications (date, title, text, imageUrl) SELECT date, title, text, imageUrl FROM Params WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE (title || text || imageUrl) = (SELECT title || text || imageUrl FROM Params))")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\data\\database\\NotificationHistoryDAO_Impl$2.smali", "DELETE FROM notifications", "SELECT 1")    
@@ -557,7 +602,6 @@ def arzmod_patch():
     update_xml_attribute(working_dir + f"{name}\\res\\layout\\test_server_dialog.xml", "app", ".//com.google.android.material.textfield.TextInputLayout[@android:id='@id/textInputLayout3']", 'helperText', 'Никнейм')
     update_xml_attribute(working_dir + f"{name}\\res\\layout\\test_server_dialog.xml", "android", ".//com.google.android.material.textfield.TextInputEditText[@android:id='@id/server_password_input']", 'inputType', 'text')
     update_xml_attribute(working_dir + f"{name}\\res\\layout\\test_server_dialog.xml", "android", ".//TextView[@android:id='@id/textView12']", 'text', 'Подключение к SA:MP серверу')
-    # update_xml_attribute(working_dir + f"{name}\\res\\layout\\fragment_information_page.xml", "app", ".//androidx.constraintlayout.widget.Guideline[@android:id='@id/donate_top_line']", 'layout_constraintGuide_percent', '0.0')
 
     replace_block_in_file(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\ui\\settings\\SettingsPageFragment.smali", "const-string v1, \"CFTqKf40\"", """invoke-direct {p0}, Lcom/arizona/launcher/ui/settings/SettingsPageFragment;->getViewModel()Lcom/arizona/launcher/MainViewModel;
 
@@ -649,7 +693,7 @@ def arzmod_patch():
 
         new-instance v1, Ljava/lang/StringBuilder;
 
-        const-string v2, "https://radarebot.hhos.net/apis/launcher_bg.php?project=ARIZONA&sign="
+        const-string v2, "https://radarebot.hhos.net/apis/launcher_bg.php?project=""" + ("ARIZONA" if project == ARIZONA_MOBILE else "RODINA") + """&sign="
 
         invoke-direct {v1, v2}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
 
@@ -676,115 +720,31 @@ def arzmod_patch():
 
     """)
 
-
-    search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\data\\repository\\settings\\SettingsRepository.smali", r"\u041f\u043e\u043b\u043d\u044b\u0439 \u044d\u043a\u0440\u0430\u043d", r"\u041E\u0442\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 MonetLoader")
     search_and_replace(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\launcher\\data\\repository\\settings\\SettingsRepository.smali", "invoke-direct {p0, p1}, Lcom/arizona/launcher/data/repository/settings/SettingsRepository;->getSettingsList(Landroid/content/SharedPreferences;)Ljava/util/List;", "invoke-static {p1}, Lcom/arzmod/radare/SettingsPatch;->getSettingsList(Landroid/content/SharedPreferences;)Ljava/util/List;")
 
-    replace_block_in_file(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASAInternal.smali", """invoke-static {v2, v0}, Ljava/util/Objects;->equals(Ljava/lang/Object;Ljava/lang/Object;)Z
-
-    move-result v1
-
-    if-eqz v1, :cond_0
-
-    const-string v1, "SCAnd"
-
-    invoke-static {v1}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    goto :goto_0
-
-    :cond_0
-    const-string v1, "ImmEmulatorJ"
-
-    invoke-static {v1}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    :goto_0
-    const-string v1, "GTASA"
-
-    invoke-static {v1}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    const-string/jumbo v1, "samp"
-
-    invoke-static {v1}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    invoke-static {v2, v0}, Ljava/util/Objects;->equals(Ljava/lang/Object;Ljava/lang/Object;)Z
-
-    move-result v0
-
-    if-eqz v0, :cond_1
-
-    const-string v0, "bass"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    const-string v0, "bass_fx"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    const-string v0, "bass_ssl"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V""", "")
-
+    delete_lines(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASAInternal.smali", "Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V")
 
 
     append_to_file(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASAInternal.smali", """
-.method public loadLibraries(Landroid/content/Context;)V
-    .locals 2
-    
-    const-string v0, "ImmEmulatorJ"
+.method public static loadLibraryFromPath(Ljava/lang/String;)V
+    .locals 1
 
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
+    if-nez p0, :valid_path
 
-    const-string v0, "GTASA"
+    new-instance v0, Ljava/lang/NullPointerException;
+    invoke-direct {v0}, Ljava/lang/NullPointerException;-><init>()V
+    throw v0
 
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
+    :valid_path
+    const-class v0, Ljava/lang/System;
+    invoke-static {p0}, Ljava/lang/System;->load(Ljava/lang/String;)V
 
-    const-string v0, "bass"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    const-string v0, "bass_fx"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    const-string v0, "bass_ssl"
-    
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-    
-    const-string v0, "monetloader_work"
-
-    invoke-static {v0}, Lcom/arzmod/radare/SettingsPatch;->getSettingsKeyValue(Ljava/lang/String;)Z
-
-    move-result v0
-    
-    if-nez v0, :cond_0
-    
-    const-string v0, "sampv"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    invoke-static {}, Lcom/arzmod/radare/InitGamePatch;->firstTimePatches()V
-    
-    goto :goto_0
-
-    :cond_0
-    
-    const-string v0, "samp"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    invoke-static {}, Lcom/arzmod/radare/InitGamePatch;->firstTimePatches()V
-
-    const-string v0, "monetloader"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-
-    const-string v0, "AML"
-
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
- 
-    :goto_0
     return-void
 .end method""")
+
+
+
+
 
     replace_code_between_lines(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASA.smali", ".method private InitSettingWrapper(I)V", ".end method", """.method private InitSettingWrapper(I)V
     .locals 2
@@ -843,7 +803,7 @@ def arzmod_patch():
     """)
 
 
-    insert_smali_code_after_line(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASAInternal.smali", ".method public onCreate", ".end annotation", "\n    invoke-virtual {p0, p0}, Lcom/arizona/game/GTASAInternal;->loadLibraries(Landroid/content/Context;)V")
+    insert_smali_code_after_line(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASAInternal.smali", ".method public onCreate", ".end annotation", "\n    invoke-static {}, Lcom/arzmod/radare/InitGamePatch;->firstTimePatches()V")
 
     insert_smali_code_after_line(working_dir + f"{name}\\{arz_src_path}\\com\\arizona\\game\\GTASA.smali", ".method public onCreate", ".locals", """
     invoke-virtual {p0}, Lcom/arizona/launcher/MainActivity;->getApplicationContext()Landroid/content/Context;
@@ -878,6 +838,7 @@ def arzmod_patch():
     invoke-static {p0}, Lcom/arzmod/radare/AppContext;->setContext(Landroid/content/Context;)V
     """)
 
+    replace_files(working_dir + "resource\\ic_chat_hello", "launcher_donate_rodina_ic")
     replace_files(working_dir + "resource\\ic_chat_hello", "launcher_donate_arz_ic")
     replace_files(working_dir + "resource\\launcher_donate_bg_svg", "launcher_donate_bg_svg")
     add_asset(working_dir + "resource\\profile.json")
@@ -885,14 +846,18 @@ def arzmod_patch():
 
     shutil.copy(working_dir + f'{name}/lib/armeabi-v7a/libsamp.so', working_dir + f'{name}/lib/armeabi-v7a/libsampv.so')
 
-    shutil.copy(working_dir + 'libpatch\\libluajit-5.1.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
-    shutil.copy(working_dir + 'libpatch\\libmonetloader.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
-    shutil.copy(working_dir + 'libpatch\\libAML.so', working_dir + f'{name}\\lib\\armeabi-v7a/')
-    if os.path.exists(working_dir + 'libpatch\\libsamp.so'):
-        shutil.copy(working_dir + 'libpatch\\libsamp.so', working_dir + f'{name}\\lib\\armeabi-v7a\\libsamp.so')
+    if usearm64:
+        add_patched_lib("libluajit-5.1.so", "arm64-v8a")
+        add_patched_lib("libmonetloader.so", "arm64-v8a")
     else:
-        print("using the latest version of libsamp.so!!")
-    shutil.rmtree(working_dir + f'{name}/lib/arm64-v8a/')
+        shutil.rmtree(os.path.join(app_dir, "lib", "arm64-v8a"))
+
+
+    add_patched_lib("libluajit-5.1.so", "armeabi-v7a")
+    add_patched_lib("libmonetloader.so", "armeabi-v7a")
+    add_patched_lib("libAML.so", "armeabi-v7a")
+    add_patched_lib("libsamp.so", "armeabi-v7a")
+
 
     if arzmod_dev:
         db = arzmod_release.connect_to_db()
@@ -900,7 +865,13 @@ def arzmod_patch():
 
         global launcher_ver, launcher_vername, launcher_verlua
         launcher_ver, launcher_vername = get_app_version()
-        cursor.execute("SELECT status FROM settings WHERE var = 'arizona_verjson'")
+        if project == ARIZONA_MOBILE:
+            cursor.execute("SELECT status FROM settings WHERE var = 'arizona_verjson'")
+        elif project == RODINA_MOBILE:
+            cursor.execute("SELECT status FROM settings WHERE var = 'rodina_verjson'")
+        else:
+            print("project == null?")
+            exit()
         result = cursor.fetchone() 
         result = int(result[0])
         launcher_verlua = launcher_ver if result + 1 < launcher_ver else result + 1
@@ -933,17 +904,26 @@ if __name__ == "__main__":
     print("Папка билбиотек:", lib_path)
     print("Папка c APK:", dist_dir)
 
+    if not os.path.exists(working_dir + f"{name}.apk"):
+        print("The APK doesn't exists")
+        exit()
+
+    if "-rodina" in sys.argv:
+        project = RODINA_MOBILE
+    else:
+        project = ARIZONA_MOBILE
+
+    if "-x64" in sys.argv:
+        usearm64 = True
+
     decompile_apk()
 
-    if not os.path.exists(working_dir + "\\" + name):
+    if not os.path.exists(working_dir + name):
         print("The project path doesn't exists")
         exit()
         
     arzmod_patch()
     rename = "app-debug"
-
-    if "-test" in sys.argv:
-        print("None")
 
     build_apk()
     if config.build_sign:
@@ -954,7 +934,7 @@ if __name__ == "__main__":
 
     if "-release" in sys.argv:
         if arzmod_dev:
-            arzmod_release.create_release(launcher_ver, launcher_vername, launcher_verlua, name, rename, working_dir, headers)
+            arzmod_release.create_release(launcher_ver, launcher_vername, launcher_verlua, name, rename, working_dir, project)
         else: print("why you use release tag, but you dont have release module?")
 
     print("Process completed successfully.")
