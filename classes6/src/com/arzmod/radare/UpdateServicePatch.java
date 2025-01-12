@@ -2,10 +2,8 @@ package com.arzmod.radare;
 
 import com.arizona.launcher.UpdateService;
 
+import com.arzmod.radare.Main;
 import com.arzmod.radare.AppContext;
-import android.app.AlertDialog;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.StatFs;
 import android.util.Log;
 import android.content.Context;
@@ -29,7 +27,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.Objects;
-import android.widget.Toast;
 
 public class UpdateServicePatch {
     class FileUpdateInfo {
@@ -60,7 +57,6 @@ public class UpdateServicePatch {
     public void checkUserFiles(JSONArray jsonArray) {
         if(SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_CLEAR_MODE)) 
         {
-            moduleDebug(jsonArray.toString());
             Log.i("arzmod-updsrv-module", "Clean up files...");
             cleanUpFiles(jsonArray);
         }
@@ -88,12 +84,11 @@ public class UpdateServicePatch {
         } catch (Exception e) {
             e.printStackTrace();
             Log.e("arzmod-updsrv-module", "Error: " + e.getMessage());
-            moduleToast("Произошла ошибка, сообщите разработчику - arzmod.com/dev");
+            Main.moduleToast("Произошла ошибка, сообщите разработчику - arzmod.com/dev");
         }
     }
 
     public boolean isUserFile(File file) {
-        moduleDebug("Check file: " + file.getPath());
         if (!SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_MODS_MODE)) return false;
 
         String packageName = context.getPackageName();
@@ -153,7 +148,7 @@ public class UpdateServicePatch {
                 filesToUpdate.add(new FileUpdateInfo(file, targetFile, needUpdate, file.length()));
                 if(!costylToast && needUpdate)
                 {
-                    moduleToast("Идёт обновление пользовательских файлов...");
+                    Main.moduleToast("Идёт обновление пользовательских файлов...");
                     costylToast = true;
                 }
             } else if (file.isDirectory()) {
@@ -188,8 +183,8 @@ public class UpdateServicePatch {
             long missingSpace = totalUpdateSize - freeSpace;
             String message = "Недостаточно места для копирования файлов! Не хватает: " + formatBytes(missingSpace);
             Log.e("arzmod-updsrv-module", message);
-            moduleDialog(message);
-            moduleToast(message);
+            Main.moduleDialog(message);
+            Main.moduleToast(message);
             saveFailedUpdatesList(filesToUpdate);
             return;
         }
@@ -211,7 +206,7 @@ public class UpdateServicePatch {
             }
         }
 
-        if(updatedFileCount > 0) moduleToast("Проверка завершена. Обновлено файлов: " + updatedFileCount + "/" + checkedFileCount);
+        if(updatedFileCount > 0) Main.moduleToast("Проверка завершена. Обновлено файлов: " + updatedFileCount + "/" + checkedFileCount);
         deleteFailedUpdatesList();
     }
 
@@ -303,7 +298,7 @@ public class UpdateServicePatch {
             int deletedFiles = 0;
 
             deletedFiles = processDirectory(filesDir, jsonFileMap, filesDir, deletedFiles);
-            if(deletedFiles > 0) moduleToast("Очищено неиспользуемых файлов: " + deletedFiles);
+            if(deletedFiles > 0) Main.moduleToast("Очищено неиспользуемых файлов: " + deletedFiles);
         } catch (Exception e) {
             Log.e("arzmod-updsrv-module", "Error during cleanup", e);
         }
@@ -357,7 +352,7 @@ public class UpdateServicePatch {
                 }
             } else if (!jsonFileMap.containsKey(relativePath) && !isUserFile(file)) {
                 Log.d("arzmod-updsrv-module", "Deleting unmatched file: " + file.getPath());
-                if(deletedFiles == 0) moduleToast("Удаление неиспользуемых файлов...");
+                if(deletedFiles == 0) Main.moduleToast("Удаление неиспользуемых файлов...");
                 deletedFiles++;
                 file.delete();
             }
@@ -405,13 +400,13 @@ public class UpdateServicePatch {
         File folder = new File("/storage/emulated/0/Android/media/" + packageName + "/files/");
 
         if (folder.exists()) {
-            moduleToast("Удаление сборки...");
+            Main.moduleToast("Удаление сборки...");
             boolean result = deleteFolder(folder);
             if (result) {
-                moduleToast("Сборка удалена.");
+                Main.moduleToast("Сборка удалена.");
                 Log.v("arzmod-updsrv-module", "Mods folder successfuly removed.");
             } else {
-                moduleToast("Произошла ошибка при удалении сборки");
+                Main.moduleToast("Произошла ошибка при удалении сборки");
                 Log.e("arzmod-updsrv-module", "Mods folder is not removed. Why?");
             }
         } else {
@@ -448,46 +443,5 @@ public class UpdateServicePatch {
         int exp = (int) (Math.log(bytes) / Math.log(1024));
         String[] units = {"B", "KB", "MB", "GB", "TB", "PB", "EB"};
         return String.format("%.2f %s", bytes / Math.pow(1024, exp), units[exp]);
-    }
-
-    private void moduleToast(String msg) {
-        Handler mainHandler = new Handler(Looper.getMainLooper());
-        mainHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void moduleDebug(String log) {
-        if(!DEBUG) return;
-        Log.d("arzmod-debug-updsrv", log);
-    }
-
-    private void moduleDialog(String message) {
-        if (context == null || message == null) {
-            Log.e("arzmod-updsrv-patch", "Context and message cannot be null");
-            return;
-        }
-
-        Handler mainHandler = new Handler(Looper.getMainLooper());
-        mainHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                new AlertDialog.Builder(context)
-                    .setTitle("Информация")
-                    .setMessage(message)
-                    .setPositiveButton("ОК", new android.content.DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(android.content.DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                        }
-                    })
-                    .show();
-            }
-        });
-
-        
     }
 }
