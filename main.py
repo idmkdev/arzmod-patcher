@@ -10,7 +10,6 @@ import zipfile
 import requests
 import threading
 import subprocess
-import mysql.connector
 import xml.etree.ElementTree as ET
 
 try:
