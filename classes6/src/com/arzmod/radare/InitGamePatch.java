@@ -1,5 +1,6 @@
 package com.arzmod.radare;
 
+import android.content.res.AssetManager;
 import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
@@ -28,10 +29,10 @@ public class InitGamePatch {
     private static String CONNECT_TAG = "release";
     private static String ACTUAL_VERSION = BuildConfig.VERSION_NAME;
 
-    public static void copyFileFromAssets(Context context, String fileName, String outputPath) throws IOException {
+    public static void copyFileFromAssets(Context context, String fileName, String outputFile) throws IOException {
         InputStream inputStream = context.getAssets().open("arzmod/" + fileName);
 
-        File outFile = new File(outputPath + "/" + fileName);
+        File outFile = new File(outputFile);
 
         File parentDir = outFile.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
@@ -51,6 +52,7 @@ public class InitGamePatch {
         }
     }
 
+
     public static void loadLib(String libName) {
         context = AppContext.getContext();
         if (context == null) {
@@ -63,7 +65,6 @@ public class InitGamePatch {
         GTASAInternal.loadLibraryFromPath(nativeLibDir + "/lib" + libName + ".so");   
     }
 
-
     public static void firstTimePatches() {
         try {
             context = AppContext.getContext();
@@ -71,11 +72,12 @@ public class InitGamePatch {
                 Log.e("arzmod-initgame-module", "Context is null (firstTimePatches)");
                 return;
             }
+            SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
             String packageName = context.getPackageName();
             
             try {
-                String outputPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat";
-                copyFileFromAssets(context, "profile.json", outputPath);
+                String outputFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/profile.json";
+                copyFileFromAssets(context, "profile" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : "") + ".json", outputFile);
             } catch (IOException e) {
                 e.printStackTrace();
                 Main.moduleDialog("Ошибка при копировании файла: " + e.getMessage() + "\n\nПопробуйте вручную создать папки если их не существует. Если папка compat существует, пересоздайте её через любой проводник");
@@ -98,7 +100,7 @@ public class InitGamePatch {
             } else {
                 if(isMonetloaderWork)
                 {
-                    loadLib("samp");
+                    loadLib("samp" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : ""));
                     loadLib("monetloader");
                     loadLib("AML");
                 }
@@ -110,16 +112,36 @@ public class InitGamePatch {
                 loadLib("bass_ssl");
             }
 
-
-            SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-            GTASA.InitModloaderConfig(defaultSharedPreferences.getInt(SettingsPatch.MODLOADER_STATE, 0));
+            try {
+                GTASA.InitModloaderConfig(defaultSharedPreferences.getInt(SettingsPatch.MODLOADER_STATE, 0));
+            } catch (LinkageError e) {
+                Log.w("arzmod-initgame-module", "Unable to call native method InitModloaderConfig", e);
+            } 
 
             UtilsKt.initZip(context);
 
             Log.d("arzmod-initgame-module", "game started. by ARZMOD (arzmod.com) & Community (t.me/cleodis)");
         } catch (LinkageError e) {
-            Log.w("arzmod-initgame-module", "Unable to call native method InitModloaderConfig", e);
+            e.printStackTrace();
+            Log.e("arzmod-initgame-module", "Public firstTimePatches has errors");
         } 
+    }
+
+    public static int getGameVersion(int type) {
+        switch(type) {
+            case 1: return 1508;
+            default: return 0;
+        }
+    }
+
+    public static String formatVersion(int number) {
+        if (number < 1000 || number > 9999) {
+            return "v" + number;
+        }
+
+        String numStr = String.valueOf(number);
+
+        return "v" + numStr.substring(0, 2) + "." + numStr.substring(2, 3) + "." + numStr.substring(3, 4);
     }
 
     public static void InitSettingWrapper() {
@@ -130,12 +152,12 @@ public class InitGamePatch {
                 return;
             }
 
+            SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         
             boolean isMonetloaderWork = SettingsPatch.getSettingsKeyValue(SettingsPatch.MONETLOADER_WORK);
             boolean isShowFps = SettingsPatch.getSettingsKeyValue(SettingsConstants.SHOW_FPS);
             boolean isNewKeyboard = SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_NEW_KEYBOARD);
             boolean isNewInterface = SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_NEW_INTERFACE);
-            boolean isNewVersion = SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_NEW_VERSION);
             boolean isVersion21 = SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_VERSION_21);
             boolean isStreamerMode = SettingsPatch.getSettingsKeyValue(SettingsConstants.STREAMER_MODE);
             String deviceInfo = Build.MANUFACTURER + ":" + Build.MODEL + ":" + getUniqueID();
@@ -144,7 +166,8 @@ public class InitGamePatch {
             SharedPreferences sharedPreferences = SettingsPatch.getSettingsPreferences();
             String notifyHash = sharedPreferences.getString(SettingsConstants.TOKEN, getUniqueID());
 
-            GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, isStreamerMode, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + ACTUAL_VERSION, lastUIElementID, deviceInfo, notifyHash);
+            if(getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) == 1508) GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? formatVersion(getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0))) : ACTUAL_VERSION), lastUIElementID, deviceInfo, notifyHash);
+            else GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, isStreamerMode, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? formatVersion(getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0))) : ACTUAL_VERSION), lastUIElementID, deviceInfo, notifyHash);
             
             
             FirebaseCrashlytics.getInstance().setUserId(getUniqueID());
