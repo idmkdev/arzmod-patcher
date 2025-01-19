@@ -26,9 +26,9 @@ public class SettingsPatch  {
 
     public static final String MONETLOADER_WORK = "monetloader_work";
     public static final String MODLOADER_STATE = "modloader_state";
+    public static final String GAME_VERSION = "game_version";
     public static final String IS_NEW_KEYBOARD = "is_new_keyboard";
     public static final String IS_NEW_INTERFACE = "is_new_interface";
-    public static final String IS_NEW_VERSION = "is_new_version";
     public static final String IS_VERSION_21 = "is_version_21";
     public static final String IS_MODS_MODE = "is_mods_mode";
     public static final String IS_CLEAR_MODE = "is_clear_mode";
@@ -44,8 +44,8 @@ public class SettingsPatch  {
             new BooleanSetting("[MOD] Новый интерфейс", IS_NEW_INTERFACE, true, sharedPreferences), 
             new BooleanSetting("[MOD] Очистка неиспольуемых файлов", IS_CLEAR_MODE, false, sharedPreferences), 
             new BooleanSetting("[MOD] Режим копирования сборки", IS_MODS_MODE, false, sharedPreferences), 
-            new BooleanSetting("[MOD] Эмуляция актуальной версии", IS_NEW_VERSION, false, sharedPreferences), 
             new BooleanSetting("[MOD] Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences), 
+            new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, MapsKt.mapOf(TuplesKt.to(0, "1572 (10.1.25 actual)"), TuplesKt.to(1508, "1508 (1.9.24 archive)")), R.drawable.user_icon_vec, sharedPreferences),
             new SelectableValueSetting("Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences),
             new SelectableValueSetting("Строк чата", SettingsConstants.CHAT_PAGE_SIZE, 1, MapsKt.mapOf(TuplesKt.to(0, "5"), TuplesKt.to(1, "8"), TuplesKt.to(2, "10")), R.drawable.user_icon_vec, sharedPreferences), 
             new SelectableValueSetting("Размер шрифта чата", SettingsConstants.CHAT_FONT_SIZE, 2, MapsKt.mapOf(TuplesKt.to(0, "0.1"), TuplesKt.to(1, "0.5"), TuplesKt.to(2, "1.0"), TuplesKt.to(3, "1.5"), TuplesKt.to(4, "2.0")), R.drawable.user_icon_vec, sharedPreferences));
