@@ -1,7 +1,14 @@
 import os
 import subprocess
+import platform
 
-dex2jar_path = os.getcwd() + '/dex-tools-v2.4/d2j-dex2jar.bat'
+if platform.system() == 'Windows':
+    dex2jar_path = os.getcwd() + '/dex-tools-v2.4/d2j-dex2jar.bat'
+elif platform.system() == 'Linux' or platform.system() == 'Darwin':
+    dex2jar_path = os.getcwd() + '/dex-tools-v2.4/d2j-dex2jar.sh'
+else:
+    raise Exception("Unsupported operating system")
+
 dex_folder = os.getcwd()
 print(f"Текущая рабочая директория: {os.getcwd()}")
 
