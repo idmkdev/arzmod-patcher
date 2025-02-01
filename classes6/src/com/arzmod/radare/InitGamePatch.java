@@ -9,6 +9,9 @@ import java.util.Objects;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.io.InputStream;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -36,11 +39,16 @@ public class InitGamePatch {
 
         File parentDir = outFile.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
-            if (!parentDir.mkdirs()) {
-                throw new IOException("Не удалось создать директории: " + parentDir.getAbsolutePath());
+            Path path = parentDir.toPath();
+            try {
+                Files.createDirectories(path);
+            } catch (IOException e) {
+                throw new IOException("Ошибка при создании директории: " + path.toAbsolutePath(), e);
+            } catch (SecurityException e) {
+                throw new SecurityException("Отсутствуют права для создания директории: " + path.toAbsolutePath(), e);
             }
         }
-
+        
         try (FileOutputStream outputStream = new FileOutputStream(outFile)) {
             byte[] buffer = new byte[1024];
             int length;
@@ -78,7 +86,7 @@ public class InitGamePatch {
             try {
                 String outputFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/profile.json";
                 copyFileFromAssets(context, "profile" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : "") + ".json", outputFile);
-            } catch (IOException e) {
+            } catch(IOException | SecurityException e) {
                 e.printStackTrace();
                 Main.moduleDialog("Ошибка при копировании файла: " + e.getMessage() + "\n\nПопробуйте вручную создать папки если их не существует. Если папка compat существует, пересоздайте её через любой проводник");
                 Log.e("arzmod-initgame-module", "Ошибка при копировании файла: " + e.getMessage());
