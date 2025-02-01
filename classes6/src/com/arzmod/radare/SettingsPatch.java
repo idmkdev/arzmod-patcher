@@ -12,6 +12,7 @@ import com.arzmod.radare.Main;
 import com.arzmod.radare.AppContext;
 import android.content.Context;
 import android.content.SharedPreferences;
+import com.arizona.game.BuildConfig;
 import com.arizona.launcher.model.settings.StringSetting;
 import com.arizona.launcher.model.settings.validation.StringSettingValidator;
 import com.arizona.launcher.model.settings.AbstractSetting;
@@ -39,16 +40,16 @@ public class SettingsPatch  {
             new BooleanSetting("Отображать FPS", SettingsConstants.SHOW_FPS, false, sharedPreferences), 
             new BooleanSetting("Дата и время в чате", SettingsConstants.CHAT_PRINT_TIMESTAMP, false, sharedPreferences), 
             new BooleanSetting("Режим стримера", SettingsConstants.STREAMER_MODE, false, sharedPreferences), 
+            new SelectableValueSetting("Строк чата", SettingsConstants.CHAT_PAGE_SIZE, 1, MapsKt.mapOf(TuplesKt.to(0, "5"), TuplesKt.to(1, "8"), TuplesKt.to(2, "10")), R.drawable.user_icon_vec, sharedPreferences), 
+            new SelectableValueSetting("Размер шрифта чата", SettingsConstants.CHAT_FONT_SIZE, 2, MapsKt.mapOf(TuplesKt.to(0, "0.1"), TuplesKt.to(1, "0.5"), TuplesKt.to(2, "1.0"), TuplesKt.to(3, "1.5"), TuplesKt.to(4, "2.0")), R.drawable.user_icon_vec, sharedPreferences),
             new BooleanSetting("[MOD] MonetLoader & AML (LUA & CLEO Загрузчик)", MONETLOADER_WORK, true, sharedPreferences), 
             new BooleanSetting("[MOD] Новая клавиатура", IS_NEW_KEYBOARD, true, sharedPreferences), 
             new BooleanSetting("[MOD] Новый интерфейс", IS_NEW_INTERFACE, true, sharedPreferences), 
             new BooleanSetting("[MOD] Очистка неиспольуемых файлов", IS_CLEAR_MODE, false, sharedPreferences), 
             new BooleanSetting("[MOD] Режим копирования сборки", IS_MODS_MODE, false, sharedPreferences), 
             new BooleanSetting("[MOD] Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences), 
-            new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, MapsKt.mapOf(TuplesKt.to(0, "1572 (10.1.25 actual)"), TuplesKt.to(1508, "1508 (1.9.24 archive)")), R.drawable.user_icon_vec, sharedPreferences),
-            new SelectableValueSetting("Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences),
-            new SelectableValueSetting("Строк чата", SettingsConstants.CHAT_PAGE_SIZE, 1, MapsKt.mapOf(TuplesKt.to(0, "5"), TuplesKt.to(1, "8"), TuplesKt.to(2, "10")), R.drawable.user_icon_vec, sharedPreferences), 
-            new SelectableValueSetting("Размер шрифта чата", SettingsConstants.CHAT_FONT_SIZE, 2, MapsKt.mapOf(TuplesKt.to(0, "0.1"), TuplesKt.to(1, "0.5"), TuplesKt.to(2, "1.0"), TuplesKt.to(3, "1.5"), TuplesKt.to(4, "2.0")), R.drawable.user_icon_vec, sharedPreferences));
+            new SelectableValueSetting("[MOD] Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences),
+            new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, MapsKt.mapOf(TuplesKt.to(0, BuildConfig.VERSION_NAME + " actual"), TuplesKt.to(1508, "1508 (1.9.24 archive)")), R.drawable.user_icon_vec, sharedPreferences));
         return settingsList;
     }
 
