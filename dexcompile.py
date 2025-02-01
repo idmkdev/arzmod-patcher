@@ -2,19 +2,25 @@ import os
 import sys
 import shutil
 import subprocess
-import config
+import platform
 
 def compile_to_dex(src_dir):
     project_name = os.path.basename(os.path.normpath(src_dir))
-    current_directory = os.getcwd()
+    current_directory = os.getcwd().replace('\\', '/')
 
     classes_dir = os.path.join(current_directory, 'arzmob-classes')
 
-    jar_files = [os.path.join(classes_dir, f) for f in os.listdir(classes_dir) if f.endswith('.jar')]
-    
-    classpath = ";".join(jar_files)
+    if platform.system() == 'Windows':
+        classpath_sep = ";"
+    elif platform.system() == 'Linux' or platform.system() == 'Darwin':
+        classpath_sep = ":"
+    else:
+        raise Exception("Unsupported operating system")
 
-    out_dir = src_dir + "\\out"
+    jar_files = [os.path.join(classes_dir, f) for f in os.listdir(classes_dir) if f.endswith('.jar')]
+    classpath = classpath_sep.join(jar_files)
+
+    out_dir = os.path.join(src_dir, "out")
     dex_file = os.path.join(out_dir, f"{project_name}.dex")
 
     try:
@@ -22,7 +28,7 @@ def compile_to_dex(src_dir):
             os.makedirs(out_dir)
 
         java_files = []
-        for root, _, files in os.walk(src_dir + "\\src"):
+        for root, _, files in os.walk(os.path.join(src_dir, "src")):
             for file in files:
                 if file.endswith(".java"):
                     java_files.append(os.path.join(root, file))

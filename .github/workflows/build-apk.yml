@@ -1,0 +1,92 @@
+name: Build APKs
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11' 
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'oracle'
+          java-version: '21'
+
+      - name: Install Android SDK
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-21-jdk unzip wget
+          wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk-tools.zip
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          unzip -q sdk-tools.zip -d $ANDROID_HOME/cmdline-tools
+          mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
+      
+      - name: Install Build Tools
+        run: |
+          sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "build-tools;30.0.3"
+          echo "PATH=$ANDROID_HOME/build-tools/30.0.3:$PATH" >> $GITHUB_ENV
+
+      - name: Setup Apktool
+        run: |
+          wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
+          wget https://github.com/iBotPeaches/Apktool/releases/download/v2.6.1/apktool_2.6.1.jar -O /usr/local/bin/apktool.jar
+          chmod +x /usr/local/bin/apktool
+          echo 'alias apktool="java -jar /usr/local/bin/apktool.jar"' >> ~/.bashrc
+          source ~/.bashrc
+          
+      - name: Prepare for building
+        run: chmod +x ./arzmob-classes/dex-tools-v2.4/d2j-dex2jar.sh
+
+      - name: Build APK - x32 arz actual
+        run: python main.py -actual
+
+      - name: Upload APK - x32 arz actual
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-arizona-x32-patched
+          path: ./app-debug/dist/app-debug.apk
+
+      - name: Build APK - x64 arz actual
+        run: python main.py -actual -x64
+
+      - name: Upload APK - x64 arz actual
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-arizona-x64-patched
+          path: ./app-debug/dist/app-debug.apk
+
+      - name: Build APK - x32 rodina actual
+        run: python main.py -actual -rodina
+
+      - name: Upload APK - x32 rodina actual
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-rodina-x32-patched
+          path: ./app-debug/dist/app-debug.apk
+
+      - name: Build APK - x64 rodina actual
+        run: python main.py -actual -rodina -x64
+
+      - name: Upload APK - x64 rodina actual
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-rodina-x64-patched
+          path: ./app-debug/dist/app-debug.apk
