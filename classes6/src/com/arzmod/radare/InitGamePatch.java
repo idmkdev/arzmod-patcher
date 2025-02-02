@@ -119,12 +119,15 @@ public class InitGamePatch {
                 loadLib("bass_fx");
                 loadLib("bass_ssl");
             }
-
-            try {
-                GTASA.InitModloaderConfig(defaultSharedPreferences.getInt(SettingsPatch.MODLOADER_STATE, 0));
-            } catch (LinkageError e) {
-                Log.w("arzmod-initgame-module", "Unable to call native method InitModloaderConfig", e);
-            } 
+            
+            if (!Objects.equals(cpu, "arm64-v8a"))
+            {
+                try {
+                    GTASA.InitModloaderConfig(defaultSharedPreferences.getInt(SettingsPatch.MODLOADER_STATE, 0));
+                } catch (LinkageError e) {
+                    Log.w("arzmod-initgame-module", "Unable to call native method InitModloaderConfig", e);
+                } 
+            }
 
             UtilsKt.initZip(context);
 
