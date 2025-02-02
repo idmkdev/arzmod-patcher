@@ -67,35 +67,37 @@ jobs:
       - name: Upload APKs as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: app-arizona-x32
+          name: app-arizona-x32-patched
           path: ./dist/app-arizona-x32-patched.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: app-arizona-x64
+          name: app-arizona-x64-patched
           path: ./dist/app-arizona-x64-patched.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: app-rodina-x32
+          name: app-rodina-x32-patched
           path: ./dist/app-rodina-x32-patched.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: app-rodina-x64
+          name: app-rodina-x64-patched
           path: ./dist/app-rodina-x64-patched.apk
 
       - name: Extract version from update.json
         id: version
         run: |
-          VERSION=$(jq -r '.launcherVersionName' update.json)
-          echo "VERSION_TAG=$VERSION" >> $GITHUB_ENV
-
+          VERSION_NAME=$(jq -r '.launcherVersionName' update.json)
+          VERSION_NUMBER=$(jq -r '.launcherVersion' update.json)
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
+      
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.VERSION_TAG }}
-          name: Release ${{ env.VERSION_TAG }}
+          tag_name: ${{ env.VERSION_NUMBER }}
+          name: ${{ env.VERSION_NAME }} (${{ env.VERSION_NUMBER }})
           files: |
             ./dist/app-arizona-x32-patched.apk
             ./dist/app-arizona-x64-patched.apk
