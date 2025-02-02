@@ -97,7 +97,7 @@ public class SettingsPatch  {
                         break;
                     }
                 }
-                Intrinsics.checkNotNull(obj, "null cannot be cast to non-null type com.arizona.launcher.model.settings.BooleanSetting");
+                if(obj == null) return false;
                 return ((BooleanSetting) obj).getCurrentValue();
             }
         }
