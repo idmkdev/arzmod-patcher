@@ -1,7 +1,9 @@
 package com.arzmod.radare;
 
 import com.arizona.game.R;
+import android.os.Build;
 import java.util.List;
+import java.util.ArrayList;
 import android.util.Log;
 import kotlin.collections.MapsKt;
 import kotlin.TuplesKt;
@@ -34,22 +36,31 @@ public class SettingsPatch  {
     public static final String IS_MODS_MODE = "is_mods_mode";
     public static final String IS_CLEAR_MODE = "is_clear_mode";
     public static List<AbstractSetting> getSettingsList(SharedPreferences sharedPreferences) {
-        settingsList = CollectionsKt.mutableListOf(
-            new StringSetting("Имя пользователя", "Указывается в игре", "Указывается в игре", sharedPreferences, R.drawable.user_icon_vec, StringSettingValidator.Companion.createByRegexp("")),
-            new BooleanSetting("Полный экран", SettingsConstants.USE_FULLSCREEN, false, sharedPreferences), 
-            new BooleanSetting("Отображать FPS", SettingsConstants.SHOW_FPS, false, sharedPreferences), 
-            new BooleanSetting("Дата и время в чате", SettingsConstants.CHAT_PRINT_TIMESTAMP, false, sharedPreferences), 
-            new BooleanSetting("Режим стримера", SettingsConstants.STREAMER_MODE, false, sharedPreferences), 
-            new SelectableValueSetting("Строк чата", SettingsConstants.CHAT_PAGE_SIZE, 1, MapsKt.mapOf(TuplesKt.to(0, "5"), TuplesKt.to(1, "8"), TuplesKt.to(2, "10")), R.drawable.user_icon_vec, sharedPreferences), 
-            new SelectableValueSetting("Размер шрифта чата", SettingsConstants.CHAT_FONT_SIZE, 2, MapsKt.mapOf(TuplesKt.to(0, "0.1"), TuplesKt.to(1, "0.5"), TuplesKt.to(2, "1.0"), TuplesKt.to(3, "1.5"), TuplesKt.to(4, "2.0")), R.drawable.user_icon_vec, sharedPreferences),
-            new BooleanSetting("[MOD] MonetLoader & AML (LUA & CLEO Загрузчик)", MONETLOADER_WORK, true, sharedPreferences), 
-            new BooleanSetting("[MOD] Новая клавиатура", IS_NEW_KEYBOARD, true, sharedPreferences), 
-            new BooleanSetting("[MOD] Новый интерфейс", IS_NEW_INTERFACE, true, sharedPreferences), 
-            new BooleanSetting("[MOD] Очистка неиспольуемых файлов", IS_CLEAR_MODE, false, sharedPreferences), 
-            new BooleanSetting("[MOD] Режим копирования сборки", IS_MODS_MODE, false, sharedPreferences), 
-            new BooleanSetting("[MOD] Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences), 
-            new SelectableValueSetting("[MOD] Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences),
-            new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, MapsKt.mapOf(TuplesKt.to(0, BuildConfig.VERSION_NAME + " actual"), TuplesKt.to(1508, "1508 (1.9.24 archive)")), R.drawable.user_icon_vec, sharedPreferences));
+        List<AbstractSetting> settingsList = new ArrayList<>();
+        String cpu = Build.CPU_ABI;
+
+        settingsList.add(new StringSetting("Имя пользователя", "Указывается в игре", "Указывается в игре", sharedPreferences, R.drawable.user_icon_vec, StringSettingValidator.Companion.createByRegexp("")));
+        settingsList.add(new BooleanSetting("Полный экран", SettingsConstants.USE_FULLSCREEN, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Отображать FPS", SettingsConstants.SHOW_FPS, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Дата и время в чате", SettingsConstants.CHAT_PRINT_TIMESTAMP, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Режим стримера", SettingsConstants.STREAMER_MODE, false, sharedPreferences));
+        settingsList.add(new SelectableValueSetting("Строк чата", SettingsConstants.CHAT_PAGE_SIZE, 1, MapsKt.mapOf(TuplesKt.to(0, "5"), TuplesKt.to(1, "8"), TuplesKt.to(2, "10")), R.drawable.user_icon_vec, sharedPreferences));
+        settingsList.add(new SelectableValueSetting("Размер шрифта чата", SettingsConstants.CHAT_FONT_SIZE, 2, MapsKt.mapOf(TuplesKt.to(0, "0.1"), TuplesKt.to(1, "0.5"), TuplesKt.to(2, "1.0"), TuplesKt.to(3, "1.5"), TuplesKt.to(4, "2.0")), R.drawable.user_icon_vec, sharedPreferences));
+        settingsList.add(new BooleanSetting("[MOD] MonetLoader & AML (LUA & CLEO Загрузчик)", MONETLOADER_WORK, true, sharedPreferences));
+
+        if (!cpu.equals("arm64-v8a")) {
+            settingsList.add(new BooleanSetting("[MOD] Новая клавиатура", IS_NEW_KEYBOARD, true, sharedPreferences));
+            settingsList.add(new BooleanSetting("[MOD] Новый интерфейс", IS_NEW_INTERFACE, true, sharedPreferences));
+        }
+    
+        settingsList.add(new BooleanSetting("[MOD] Очистка неиспольуемых файлов", IS_CLEAR_MODE, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("[MOD] Режим копирования сборки", IS_MODS_MODE, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("[MOD] Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences));
+
+        if (!cpu.equals("arm64-v8a")) {
+            settingsList.add(new SelectableValueSetting("[MOD] Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences));
+            settingsList.add(new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, MapsKt.mapOf(TuplesKt.to(0, BuildConfig.VERSION_NAME + " actual"), TuplesKt.to(1508, "1508 (1.9.24 archive)")), R.drawable.user_icon_vec, sharedPreferences));
+        }
         return settingsList;
     }
 

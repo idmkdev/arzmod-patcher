@@ -93,11 +93,29 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
       
+      - name: Check and generate unique tag
+        id: tag
+        run: |
+          BASE_TAG="${{ env.VERSION_NUMBER }}"
+          PATCH_NUMBER=1
+          
+          if git ls-remote --tags origin | grep -q "refs/tags/${BASE_TAG}"; then
+            while git ls-remote --tags origin | grep -q "refs/tags/${BASE_TAG}_patch_${PATCH_NUMBER}"; do
+              PATCH_NUMBER=$((PATCH_NUMBER + 1))
+            done
+            NEW_TAG="${BASE_TAG}_patch_${PATCH_NUMBER}"
+          else
+            NEW_TAG="${BASE_TAG}"
+          fi
+          
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+          echo "Release tag: $NEW_TAG"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.VERSION_NUMBER }}
-          name: ${{ env.VERSION_NAME }} (${{ env.VERSION_NUMBER }})
+          tag_name: ${{ env.NEW_TAG }}
+          name: ${{ env.VERSION_NAME }} (${{ env.NEW_TAG }})
           files: |
             ./dist/app-arizona-x32-patched.apk
             ./dist/app-arizona-x64-patched.apk

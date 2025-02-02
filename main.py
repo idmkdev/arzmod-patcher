@@ -53,6 +53,22 @@ def get_app_version():
         print(f"Error reading {app_dir}/apktool.yml: {e}")
         return None, None
 
+def update_app_version(new_version_code, new_version_name):
+    try:
+        with open(app_dir + "/apktool.yml", 'r', encoding='utf-8') as file:
+            content = file.read()
+
+        content = re.sub(r"versionCode:\s*'(\d+)'", f"versionCode: '{new_version_code}'", content)
+        content = re.sub(r"versionName:\s*([^']+)", f"versionName: {new_version_name}", content)
+
+        with open(app_dir + "/apktool.yml", 'w', encoding='utf-8') as file:
+            file.write(content)
+
+        print(f"Updated versionCode to {new_version_code} and versionName to '{new_version_name}'")
+    except Exception as e:
+        print(f"Error updating {app_dir}/apktool.yml: {e}")
+
+
 def replace_files(base_path, name):
     res_folder = f"{app_dir}/res"
     if not os.path.exists(res_folder):
@@ -82,11 +98,11 @@ def replace_files(base_path, name):
         print(f"Не было найдено файлов для замены {name}.")
 
 def add_patched_lib(libname, arch):
-    patched_lib = f"{working_dir}/libpatch/{arch}/{libname}"
+    patched_lib = f"{working_dir}/libpatch/{arch}/{'ARIZONA' if project == ARIZONA_MOBILE else 'RODINA'}/{libname}"
     libpath = f"{app_dir}/lib/{arch}/{libname}"
     if os.path.exists(patched_lib):
         shutil.copy(patched_lib, libpath)
-        print(f"Библиотека {libname} для {arch} успешно копирована!")
+        print(f"Библиотека {libname} для {arch} для проекта {'ARIZONA' if project == ARIZONA_MOBILE else 'RODINA'} успешно копирована!")
     elif os.path.exists(libpath):
         print(f"Библиотеки {libname} для копирования не найдено в libpatch. Используется исходная версия")
     else:
@@ -661,11 +677,11 @@ def arzmod_patch():
     else:
         search_and_replace(src_path + "/com/arizona/launcher/MainEntrench.smali", " release_web\"", " arzmod_community\"")
 
+    if not usearm64: search_and_replace(src_path + "/com/arizona/launcher/ui/settings/SettingsPageFragment.smali", "invoke-virtual {v0, v1}, Landroid/widget/ImageView;->setVisibility(I)V", "")
+    search_and_replace(src_path + "/com/arizona/launcher/ui/settings/SettingsPageFragment.smali", "135.181.129.36", "join.arzfun.com")
     search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", "invoke-static {p0, p1, p2}, Lcom/arizona/launcher/MainEntrench$IncomingHandler;->handleMessage$lambda$14$lambda$12(Lcom/arizona/launcher/MainEntrench;Landroid/content/DialogInterface;I)V", "invoke-static {p0, p1, p2}, Lcom/arizona/launcher/MainEntrench$IncomingHandler;->handleMessage$lambda$14$lambda$13(Lcom/arizona/launcher/MainEntrench;Landroid/content/DialogInterface;I)V")
     search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", "invoke-static {p0, p1, p2}, Lcom/arizona/launcher/MainEntrench$IncomingHandler;->handleMessage$lambda$1(Lcom/arizona/launcher/MainEntrench;Landroid/content/DialogInterface;I)V", "invoke-static {p0, p1, p2}, Lcom/arizona/launcher/MainEntrench$IncomingHandler;->handleMessage$lambda$14$lambda$13(Lcom/arizona/launcher/MainEntrench;Landroid/content/DialogInterface;I)V")    
     search_and_replace(src_path + "/com/arizona/launcher/UpdateService$isAllFilesOk$1.smali", "iget-boolean v6, p0, Lcom/arizona/launcher/UpdateService$isAllFilesOk$1;->$purgeExtraFiles:Z", "const/4 v6, 0x0")
-    search_and_replace(src_path + "/com/arizona/launcher/ui/settings/SettingsPageFragment.smali", "135.181.129.36", "join.arzfun.com")
-    search_and_replace(src_path + "/com/arizona/launcher/ui/settings/SettingsPageFragment.smali", "invoke-virtual {v0, v1}, Landroid/widget/ImageView;->setVisibility(I)V", "")
     search_and_replace(src_path + "/com/arizona/launcher/data/database/NotificationHistoryDAO_Impl.smali", "SELECT * FROM notifications ORDER BY date LIMIT 5", "SELECT * FROM notifications ORDER BY id DESC")
     search_and_replace(src_path + "/com/arizona/launcher/data/database/NotificationHistoryDAO_Impl$1.smali", "INSERT OR REPLACE INTO `notifications` (`id`,`date`,`title`,`text`,`imageUrl`) VALUES (nullif(?, 0),?,?,?,?)", "WITH Params AS (SELECT ? AS id, ? AS date, ? AS title, ? AS text, ? AS imageUrl) INSERT INTO notifications (date, title, text, imageUrl) SELECT date, title, text, imageUrl FROM Params WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE (title || text || imageUrl) = (SELECT title || text || imageUrl FROM Params))")
     search_and_replace(src_path + "/com/arizona/launcher/data/database/NotificationHistoryDAO_Impl$2.smali", "DELETE FROM notifications", "SELECT 1")    
@@ -998,13 +1014,14 @@ def arzmod_patch():
     launcher_ver, launcher_vername = get_app_version()
 
     if arzmodbuild:
-        currentversion = get_version(f"https://radarebot.hhos.net/{ 'arz_modclient' if project == 'ARIZONA_MOBILE' else 'rod_modclient' }/update.json")
+        currentversion = get_version(f"https://radarebot.hhos.net/{'arz_modclient' if project == ARIZONA_MOBILE else 'rod_modclient'}/update.json")
         if arzmod_dev:
             launcher_verlua = launcher_ver if currentversion + 1 < launcher_ver else currentversion + 1 
         else:
             launcher_verlua = currentversion
     elif not arzmodbuild:
         launcher_verlua = 0x7FFF
+        update_app_version(1, f"{launcher_vername}_without_updates")
 
     print(f"Set update version from {launcher_ver} to {launcher_verlua}")
     search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", str(hex(int(launcher_ver))), str(hex(int(launcher_verlua))))
@@ -1055,7 +1072,7 @@ if __name__ == "__main__":
     else:
         project = ARIZONA_MOBILE
 
-    if "-actual":
+    if "-actual" in sys.argv:
         name = "app-debug"
         if project == ARIZONA_MOBILE:
             download_file("https://mob.maz-ins.com/game/release/launcher_new/app-arizona-release_web.apk", working_dir + f"/{name}.apk")
