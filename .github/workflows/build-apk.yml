@@ -51,42 +51,55 @@ jobs:
           chmod +x /usr/local/bin/apktool
           echo 'alias apktool="java -jar /usr/local/bin/apktool.jar"' >> ~/.bashrc
           source ~/.bashrc
-          
+
       - name: Prepare for building
         run: chmod +x ./arzmob-classes/dex-tools-v2.4/d2j-dex2jar.sh
 
-      - name: Build APK - x32 arz actual
-        run: python main.py -actual
+      - name: Build APKs
+        run: |
+          mkdir -p dist
+          python main.py -actual && mv ./app-debug/dist/app-debug.apk ./dist/app-arizona-x32-patched.apk
+          python main.py -actual -x64 && mv ./app-debug/dist/app-debug.apk ./dist/app-arizona-x64-patched.apk
+          python main.py -actual -rodina && mv ./app-debug/dist/app-debug.apk ./dist/app-rodina-x32-patched.apk
+          python main.py -actual -rodina -x64 && mv ./app-debug/dist/app-debug.apk ./dist/app-rodina-x64-patched.apk
 
-      - name: Upload APK - x32 arz actual
+
+      - name: Upload APKs as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: app-arizona-x32-patched
-          path: ./app-debug/dist/app-debug.apk
+          name: app-arizona-x32
+          path: ./dist/app-arizona-x32-patched.apk
 
-      - name: Build APK - x64 arz actual
-        run: python main.py -actual -x64
-
-      - name: Upload APK - x64 arz actual
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-arizona-x64-patched
-          path: ./app-debug/dist/app-debug.apk
+          name: app-arizona-x64
+          path: ./dist/app-arizona-x64-patched.apk
 
-      - name: Build APK - x32 rodina actual
-        run: python main.py -actual -rodina
-
-      - name: Upload APK - x32 rodina actual
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-rodina-x32-patched
-          path: ./app-debug/dist/app-debug.apk
+          name: app-rodina-x32
+          path: ./dist/app-rodina-x32-patched.apk
 
-      - name: Build APK - x64 rodina actual
-        run: python main.py -actual -rodina -x64
-
-      - name: Upload APK - x64 rodina actual
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-rodina-x64-patched
-          path: ./app-debug/dist/app-debug.apk
+          name: app-rodina-x64
+          path: ./dist/app-rodina-x64-patched.apk
+
+      - name: Extract version from update.json
+        id: version
+        run: |
+          VERSION=$(jq -r '.launcherVersionName' update.json)
+          echo "VERSION_TAG=$VERSION" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION_TAG }}
+          name: Release ${{ env.VERSION_TAG }}
+          files: |
+            ./dist/app-arizona-x32-patched.apk
+            ./dist/app-arizona-x64-patched.apk
+            ./dist/app-rodina-x32-patched.apk
+            ./dist/app-rodina-x64-patched.apk
+          draft: false
+          prerelease: false
