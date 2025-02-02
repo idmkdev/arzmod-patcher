@@ -506,6 +506,7 @@ def update_xml_attribute(file_path, namespace, search_path, attribute, new_value
 
 
 def set_package_name(old, new):
+    print(f"Меняем имя пакета с {old} на {new}")
     search_and_replace(app_dir + '/AndroidManifest.xml', old, new)
 
     for foldername, subfolders, filenames in os.walk(app_dir + f'/{arz_src_path}/'):
@@ -636,7 +637,7 @@ def run_command(command, cwd=None, check=True):
 
 
 def arzmod_patch():
-    package_name = "com.arizona.game" if project == ARIZONA_MOBILE else "com.rodina.game"
+    package_name = f"{'com.arizona.game' if project == ARIZONA_MOBILE else 'com.rodina.game'}{'.git' if not arzmodbuild  else ''}"
     set_package_name("com.arizona21.game.web" if project == ARIZONA_MOBILE else "com.rodina21.game.web", package_name)
 
     if arzmodbuild:
