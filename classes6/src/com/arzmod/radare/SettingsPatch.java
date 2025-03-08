@@ -59,7 +59,7 @@ public class SettingsPatch  {
 
         if (!cpu.equals("arm64-v8a")) {
             settingsList.add(new SelectableValueSetting("[MOD] Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences));
-            settingsList.add(new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, MapsKt.mapOf(TuplesKt.to(0, BuildConfig.VERSION_NAME + " actual"), TuplesKt.to(1508, "1508 (1.9.24 archive)")), R.drawable.user_icon_vec, sharedPreferences));
+            settingsList.add(new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, MapsKt.mapOf(TuplesKt.to(0, "1582 actual working"), TuplesKt.to(1, BuildConfig.VERSION_NAME + " arz crash"), TuplesKt.to(1508, "1508 arz crash")), R.drawable.user_icon_vec, sharedPreferences));
         }
         return settingsList;
     }

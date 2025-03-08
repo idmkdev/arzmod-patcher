@@ -1,7 +1,7 @@
 {
     "gtasa_name": "libGTASA.so",
     "profile_name": "v15.0.8 by MonetLoader (t.me/monetloader)",
-    "compat_scripts": [],
+    "compat_scripts": ["arzmod.lua", "user.lua"],
     "samp_name": "libsamp1508.so",
     "receiveignorerpc_pattern": "F0B503AF2DE900????B004460068C16A20468847",
     "cnetgame_ctor_pattern": "F0B503AF2DE9000788B00D46????9146????0446002079447A44",
