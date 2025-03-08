@@ -32,23 +32,34 @@ public class InitGamePatch {
     private static String CONNECT_TAG = "release";
     private static String ACTUAL_VERSION = BuildConfig.VERSION_NAME;
 
-    public static void copyFileFromAssets(Context context, String fileName, String outputFile) throws IOException {
-        InputStream inputStream = context.getAssets().open("arzmod/" + fileName);
+    public static void copyFileFromAssets(Context context, String fileName, String outputPath) throws IOException {
+        AssetManager assetManager = context.getAssets();
 
-        File outFile = new File(outputFile);
+        String[] assets;
+        try {
+            assets = assetManager.list("arzmod/" + fileName);
+            if (assets != null && assets.length > 0) {
+                copyFolderFromAssets(context, "arzmod/" + fileName, new File(outputPath));
+            } else {
+                copySingleFileFromAssets(context, "arzmod/" + fileName, new File(outputPath));
+            }
+        } catch (IOException e) {
+            copySingleFileFromAssets(context, "arzmod/" + fileName, new File(outputPath));
+        }
+    }
+
+    private static void copySingleFileFromAssets(Context context, String assetPath, File outFile) throws IOException {
+        InputStream inputStream = context.getAssets().open(assetPath);
+
+        if (outFile.exists()) {
+            deleteRecursively(outFile);
+        }
 
         File parentDir = outFile.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
-            Path path = parentDir.toPath();
-            try {
-                Files.createDirectories(path);
-            } catch (IOException e) {
-                throw new IOException("Ошибка при создании директории: " + path.toAbsolutePath(), e);
-            } catch (SecurityException e) {
-                throw new SecurityException("Отсутствуют права для создания директории: " + path.toAbsolutePath(), e);
-            }
+            Files.createDirectories(parentDir.toPath());
         }
-        
+
         try (FileOutputStream outputStream = new FileOutputStream(outFile)) {
             byte[] buffer = new byte[1024];
             int length;
@@ -57,6 +68,46 @@ public class InitGamePatch {
             }
         } finally {
             inputStream.close();
+        }
+    }
+
+    private static void copyFolderFromAssets(Context context, String assetFolderPath, File outputFolder) throws IOException {
+        AssetManager assetManager = context.getAssets();
+        String[] assets = assetManager.list(assetFolderPath);
+
+        if (outputFolder.exists()) {
+            deleteRecursively(outputFolder);
+        }
+
+        if (!outputFolder.exists() && !outputFolder.mkdirs()) {
+            throw new IOException("Не удалось создать папку: " + outputFolder.getAbsolutePath());
+        }
+
+        if (assets != null) {
+            for (String asset : assets) {
+                String assetPath = assetFolderPath + "/" + asset;
+                File outFile = new File(outputFolder, asset);
+
+                if (assetManager.list(assetPath).length > 0) {
+                    copyFolderFromAssets(context, assetPath, outFile);
+                } else {
+                    copySingleFileFromAssets(context, assetPath, outFile);
+                }
+            }
+        }
+    }
+
+    private static void deleteRecursively(File file) throws IOException {
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            if (files != null) {
+                for (File child : files) {
+                    deleteRecursively(child);
+                }
+            }
+        }
+        if (!file.delete()) {
+            throw new IOException("Не удалось удалить файл или папку: " + file.getAbsolutePath());
         }
     }
 
@@ -85,7 +136,7 @@ public class InitGamePatch {
             
             try {
                 String outputFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/profile.json";
-                copyFileFromAssets(context, "profile" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : "") + ".json", outputFile);
+                copyFileFromAssets(context, "profile"+ (getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) != 0 ? getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : "")+".json", outputFile);
             } catch(IOException | SecurityException e) {
                 e.printStackTrace();
                 Main.moduleDialog("Ошибка при копировании файла: " + e.getMessage() + "\n\nПопробуйте вручную создать папки если их не существует. Если папка compat существует, пересоздайте её через любой проводник");
@@ -108,11 +159,11 @@ public class InitGamePatch {
             } else {
                 if(isMonetloaderWork)
                 {
-                    loadLib("samp" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : ""));
+                    loadLib("samp" + (getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) != 0 ? getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : ""));
                     loadLib("monetloader");
                     loadLib("AML");
                 }
-                else loadLib("sampv");
+                else loadLib("samp1582");
             }
             if (Objects.equals(cpu, "arm64-v8a")) {
                 loadLib("bass");
@@ -140,7 +191,8 @@ public class InitGamePatch {
 
     public static int getGameVersion(int type) {
         switch(type) {
-            case 1: return 1508;
+            case 0: return 1582; 
+            case 2: return 1508;
             default: return 0;
         }
     }
@@ -178,7 +230,7 @@ public class InitGamePatch {
             String notifyHash = sharedPreferences.getString(SettingsConstants.TOKEN, getUniqueID());
 
             if(getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) == 1508) GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? formatVersion(getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0))) : ACTUAL_VERSION), lastUIElementID, deviceInfo, notifyHash);
-            else GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, isStreamerMode, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) != 0 ? formatVersion(getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0))) : ACTUAL_VERSION), lastUIElementID, deviceInfo, notifyHash);
+            else GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, isStreamerMode, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) != 0 ? formatVersion(getGameVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0))) : ACTUAL_VERSION), lastUIElementID, deviceInfo, notifyHash);
             
             
             FirebaseCrashlytics.getInstance().setUserId(getUniqueID());

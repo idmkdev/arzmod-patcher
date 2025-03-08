@@ -548,7 +548,7 @@ def download_file(url, filepath):
 
 def get_version(url):
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers={'accept': '*/*', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0', 'Upgrade-Insecure-Requests': '1'})
         response.raise_for_status() 
         data = response.json()
         version = int(data.get("launcherVersion"))
@@ -585,7 +585,7 @@ def sign_apk(rename, keypass):
     run_command(f"zipalign -p 4 {dist_dir}/{cname}.apk {aligned_apk}", cwd=working_dir)
 
     print("Signing APK...")
-    keystore = f"{working_dir}/key/{config.key_name}"
+    keystore = f"{working_dir}/key/{arzmod_release.key_name if arzmod_dev else config.key_name}"
     if os.path.exists(keystore):
         run_command(f"apksigner sign --ks {keystore} --v4-signing-enabled true --ks-pass pass:{keypass} {aligned_apk}", cwd=working_dir)
         print("Delete cache")
@@ -1007,7 +1007,10 @@ def arzmod_patch():
     add_patched_lib("libluajit-5.1.so", "armeabi-v7a")
     add_patched_lib("libmonetloader.so", "armeabi-v7a")
     add_patched_lib("libAML.so", "armeabi-v7a")
+    
+
     add_game_version("actual")
+    add_game_version(1582)
     add_game_version(1508)
 
 
@@ -1100,10 +1103,10 @@ if __name__ == "__main__":
     rename = "app-debug"
 
     build_apk()
-    if config.build_sign:
-        sign_apk(rename, config.key_password)
+    if (arzmod_release.build_sign if arzmod_dev else config.build_sign):
+        sign_apk(rename, arzmod_release.key_password if arzmod_dev else config.key_password)
         
-    if config.build_download:
+    if (arzmod_release.build_download if arzmod_dev else config.build_download):
         download_apk(rename)
 
     if arzmodbuild and "-release" in sys.argv:

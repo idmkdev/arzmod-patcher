@@ -35,10 +35,6 @@ public class Main {
             Log.e("arzmod-radare-module", "Context and message cannot be null");
             return;
         }
-
-        Log.d("arzmod-radare-module", "Context class: " + context.getClass().getSimpleName());
-        Log.d("arzmod-radare-module", "Context: " + context.toString());
-
         Handler mainHandler = new Handler(Looper.getMainLooper());
         mainHandler.post(new Runnable() {
             @Override
