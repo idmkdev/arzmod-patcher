@@ -356,37 +356,50 @@ def remove_line_numbers(file_path):
 	except Exception as e:
 		exitWithError(f"Произошла ошибка: {e}")
 
-def replace_block_in_file(file_path, old_block, new_line):
-	try:
-		remove_line_numbers(file_path)
-		time.sleep(1)
+def replace_block_in_file(file_path, old_block, new_line, after_line=None):
+    try:
+        remove_line_numbers(file_path)
+        time.sleep(1)
 
-		with open(file_path, 'r', encoding='utf-8') as file:
-			content = file.read()
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
 
-		old_block = re.sub(r'\s+', ' ', old_block.strip())
-		pattern = re.escape(old_block)
-		pattern = re.sub(r'\\ ', r'\\s+', pattern)
-		new_line = new_line.strip()
-		new_content, count = re.subn(pattern, new_line, content, flags=re.DOTALL | re.IGNORECASE)
+        old_block = re.sub(r'\s+', ' ', old_block.strip())
+        pattern = re.escape(old_block)
+        pattern = re.sub(r'\\ ', r'\\s+', pattern)
+        new_line = new_line.strip()
 
-		if count == 0:
-			print("-------------------DEBUG-------------------")
-			print("file_path:", file_path)
-			print("old_block:", old_block)
-			print("new_line:", new_line)
-			print("Замена не выполнена: блок не найден.")
-			print("-------------------------------------------")
-			exitWithError("Замена не выполнена: блок не найден.")
-		else:
-			print(f"Произведено {count} замен блоков кода в файле {file_path}")
+        if after_line is not None:
+            after_line = re.escape(after_line.strip())
+            after_line_pattern = re.compile(after_line, re.DOTALL | re.IGNORECASE)
+            match = after_line_pattern.search(content)
+            if match:
+                start_pos = match.end()
+                content_after = content[start_pos:]
+                new_content_after, count = re.subn(pattern, new_line, content_after, count=1, flags=re.DOTALL | re.IGNORECASE)
+                new_content = content[:start_pos] + new_content_after
+            else:
+                exitWithError("Строка после которой нужно выполнить замену не найдена.")
+                return
+        else:
+            new_content, count = re.subn(pattern, new_line, content, flags=re.DOTALL | re.IGNORECASE)
 
-		with open(file_path, 'w', encoding='utf-8') as file:
-			file.write(new_content)
+        if count == 0:
+            print("-------------------DEBUG-------------------")
+            print("file_path:", file_path)
+            print("old_block:", old_block)
+            print("new_line:", new_line)
+            print("Замена не выполнена: блок не найден.")
+            print("-------------------------------------------")
+            exitWithError("Замена не выполнена: блок не найден.")
+        else:
+            print(f"Произведено {count} замен блоков кода в файле {file_path}")
 
-	except Exception as e:
-		exitWithError(f"Произошла ошибка: {e}")
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(new_content)
 
+    except Exception as e:
+        exitWithError(f"Произошла ошибка: {e}")
 
 
 def insert_smali_code_after_line(file_path, method_name, target_line, smali_code):
@@ -737,6 +750,7 @@ def arzmod_patch():
 
 	# TEXT PATCH
 	search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u0444\u0430\u0439\u043b\u043e\u0432 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0430, \u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a", r"\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430\u0020\u0444\u0430\u0439\u043b\u043e\u0432\u0020\u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0430\u002c\u0020\u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a\u002e\u0020\u041f\u043e\u0441\u043b\u0435\u0020\u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a\u0430\u002c\u0020\u043e\u0431\u043d\u043e\u0432\u0438\u0442\u0435\u0020\u0438\u0433\u0440\u0443\u0020\u0434\u043b\u044f\u0020\u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u043e\u0439\u0020\u0440\u0430\u0431\u043e\u0442\u044b\u002e")
+	search_and_replace(miami_path + "/com/miami/game/feature/download/dialog/ui/setup/DescriptionTextKt.smali", r". \u0412\u044b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c?", r". \u0412\u044b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c? \u0415\u0441\u043b\u0438\u0020\u0432\u044b\u0020\u0445\u043e\u0442\u0438\u0442\u0435\u0020\u043f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u0020\u002d\u0020\u043e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u0435\u0020\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0443\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439\u0020\u043a\u0435\u0448\u0430\u0020\u0438\u0433\u0440\u044b\u0020\u0432\u0020\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445\u0020\u002d\u0020\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438\u0020\u0041\u0052\u005a\u004d\u004f\u0044")
 
 	if arzmodbuild:		
 		# TEXT PATCH
@@ -779,7 +793,6 @@ def arzmod_patch():
 		if project == ARIZONA_MOBILE: search_and_replace(ui_path + "/ru/mrlargha/commonui/elements/hud/presentation/api/HudApi.smali", "desktop/ping/Arizona/ping.json", "https://radarebot.hhos.net/api/serverlist")
 
 		# UPDATESERVICE PATCH (ARZMOD FILESERVERS)
-		search_and_replace(src_path + "/com/arizona/launcher/util/FileServers.smali", "/game/release/", "/")
 		search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "data/files", "data")
 		append_to_file(src_path + "/com/arizona/launcher/UpdateService.smali", """
 			.method public getARZMODPatchedPath(Ljava/lang/String;)Ljava/io/File;
@@ -814,11 +827,16 @@ def arzmod_patch():
 		""")
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", "Lcom/arizona/launcher/MainEntrench$IncomingHandler$$ExternalSyntheticLambda4", "Lcom/arizona/launcher/MainEntrench$IncomingHandler$$ExternalSyntheticLambda0")
 		if project == ARIZONA_MOBILE:
+			search_and_replace(src_path + "/com/arizona/launcher/util/FileServers.smali", "/game/release/", "/")
 			search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "launcher_new/app-arizona-release_web.apk", "launcher_new/app-debug.apk")
 			search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "app-arizona-release_web.apk", f"/data/{package_name}/files/app-debug.apk")
+			search_and_replace(src_path + "/com/arizona/launcher/UpdateActivity$IncomingHandler.smali", "app-arizona-release_web.apk", "app-debug.apk")
+
 		elif project == RODINA_MOBILE:
+			search_and_replace(src_path + "/com/arizona/launcher/util/FileServers.smali", "/release/", "/")
 			search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "launcher_new/app-rodina-release_web.apk", "launcher_new/app-debug.apk")
 			search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "app-rodina-release_web.apk", f"/data/{package_name}/files/app-debug.apk")
+			search_and_replace(src_path + "/com/arizona/launcher/UpdateActivity$IncomingHandler.smali", "app-rodina-release_web.apk", "app-debug.apk")
 		else:
 			exitWithError("project == null?")
 
@@ -901,7 +919,7 @@ def arzmod_patch():
 			invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
 
 			move-result-object v6
-		""")
+		""", ".method private final connectToTestServer")
 
 	# UPDATESERVICE PATCH + classes_arzmod/src/com/arzmod/radare/UpdateServicePatch.java
 	search_and_replace(src_path + "/com/arizona/launcher/UpdateService$isAllFilesOk$1.smali", "iget-boolean v6, p0, Lcom/arizona/launcher/UpdateService$isAllFilesOk$1;->$purgeExtraFiles:Z", "const/4 v6, 0x0")	
@@ -909,7 +927,6 @@ def arzmod_patch():
 		invoke-static {}, Lcom/arzmod/radare/UpdateServicePatch;->isModeMods()Z
 		move-result v0
 		if-eqz v0, :continue_execution
-		invoke-direct {p0}, Lcom/arizona/launcher/MainEntrench;->checkLauncherUpdate()V
 		return-void
 		:continue_execution
 	""")
@@ -1030,10 +1047,11 @@ def arzmod_patch():
 	""")
 
 	# REPLACE PHOTO
+	replace_files(working_dir + "/resource/mod_settings_btn", "privacy_policy")
+	replace_files(working_dir + "/resource/input_name", "input_password")
 	if arzmodbuild:
 		replace_files(working_dir + "/resource/ic_chat_button", "ic_btn_shop")
-		replace_files(working_dir + "/resource/mod_settings_btn", "privacy_policy")
-		replace_files(working_dir + "/resource/input_name", "input_password")
+		replace_files(working_dir + "/resource/remote_config_defaults", "remote_config_defaults")
 
 	# FOR GAME WORK WITHOUT MONETLOADER ON NEW VERSION (old costyl)
 	shutil.copy(f'{app_dir}/lib/armeabi-v7a/libsamp.so', f'{app_dir}/lib/armeabi-v7a/libsampv.so')

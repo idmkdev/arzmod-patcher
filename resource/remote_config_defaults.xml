@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<defaults>
+  <entry>
+    <key>main_rodina_news</key>
+    <value>https://api.arzmod.com</value>
+  </entry>
+  <entry>
+    <key>main_rodina_ping</key>
+    <value>https://api.arizona-five.com</value>
+  </entry>
+  <entry>
+    <key>main_channel_rodina</key>
+    <value>https://download.arzmod.com/rod_modclient</value>
+  </entry>
+  <entry>
+    <key>reserve_channel_rodina</key>
+    <value>https://radarebot.hhos.net/rod_modclient</value>
+  </entry>
+  <entry>
+    <key>main_arizona_news</key>
+    <value>https://api.arzmod.com</value>
+  </entry>
+  <entry>
+    <key>main_arizona_ping</key>
+    <value>https://api.arizona-five.com</value>
+  </entry>
+  <entry>
+    <key>main_channel_arizona</key>
+    <value>https://download.arzmod.com/arz_modclient</value>
+  </entry>
+  <entry>
+    <key>reserve_channel_arizona</key>
+    <value>https://radarebot.hhos.net/arz_modclient</value>
+  </entry>
+</defaults>

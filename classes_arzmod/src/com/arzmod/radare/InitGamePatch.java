@@ -133,6 +133,11 @@ public class InitGamePatch {
             SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
             String packageName = context.getPackageName();
             
+            if (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) == 0) {
+                SharedPreferences.Editor editor = defaultSharedPreferences.edit();
+                editor.putInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE);
+                editor.apply();
+            }
             try {
                 String outputFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/profile.json";
                 copyFileFromAssets(context, "profile"+ (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : "")+".json", outputFile);
