@@ -544,6 +544,53 @@ def update_xml_attribute(file_path, namespace, search_path, attribute, new_value
 		print("-------------------------------------------")
 		exitWithError("Атрибут не найден")
 
+def count_methods_in_smali(file_path):
+    method_pattern = re.compile(r'^\.method')
+    count = 0
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
+        for line in file:
+            if method_pattern.match(line.strip()):
+                count += 1
+    return count
+
+def count_methods_in_dir(directory):
+    total_methods = 0
+    smali_files = []
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.endswith('.smali'):
+                file_path = os.path.join(root, file)
+                method_count = count_methods_in_smali(file_path)
+                total_methods += method_count
+                smali_files.append((file_path, method_count))
+    return total_methods, smali_files
+
+def get_new_smali_dir_index(base_dir):
+    index = 2
+    while os.path.exists(os.path.join(base_dir, f"smali_classes{index}")):
+        index += 1
+    return index
+
+def redistribute_smali_files(source_folder, base_dir, method_limit=50000):
+    current_methods, smali_files = count_methods_in_dir(source_folder)
+    if current_methods <= method_limit:
+        return
+    
+    new_smali_dir = os.path.join(base_dir, f"smali_classes{get_new_smali_dir_index(base_dir)}") 
+    new_smali_path = os.path.join(base_dir, new_smali_dir)
+    os.makedirs(new_smali_path, exist_ok=True)
+    
+    moved_methods = 0
+    for file_path, method_count in sorted(smali_files, key=lambda x: -x[1]):
+        if current_methods - moved_methods <= method_limit:
+            break
+        rel_path = os.path.relpath(file_path, source_folder)
+        new_path = os.path.join(new_smali_path, rel_path)
+        os.makedirs(os.path.dirname(new_path), exist_ok=True)
+        shutil.move(file_path, new_path)
+        moved_methods += method_count
+    
+    print(f"Часть smali-файлов из {source_folder} перемещена в {new_smali_path}")
 
 def set_package_name(old, new):
 	print(f"Меняем имя пакета с {old} на {new}")
@@ -1001,10 +1048,11 @@ def arzmod_patch():
 		add_patched_lib("libmonetloader.so", "armeabi-v7a")
 		add_patched_lib("libAML.so", "armeabi-v7a")
 	
-	# ADD GAME VERSION
-	add_game_version("actual")
-	add_game_version(1579)
-	add_game_version(1508)
+		# ADD GAME VERSION
+		add_game_version("actual")
+		if project == ARIZONA_MOBILE:
+			add_game_version(1579)
+		add_game_version(1508)
 
 	# SET UPDATE VERSION
 	global launcher_ver, launcher_vername, launcher_verlua
@@ -1022,22 +1070,26 @@ def arzmod_patch():
 
 	print(f"Set update version from {launcher_ver} to {launcher_verlua}")
 	search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", str(hex(int(launcher_ver))), str(hex(int(launcher_verlua))))
-
-	search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "update.json", "update_test.json")
 	
+	for folder in os.listdir(app_dir):
+		folder_path = os.path.join(app_dir, folder)
+		if os.path.isdir(folder_path) and folder.startswith("smali"):
+			redistribute_smali_files(folder_path, app_dir)
+
 	# REBUILD JAR CLASSES FOR COMPATIBLE BUILDING ADDITIONAL JAVA CODE
 	build_apk()
 	update_classes(working_dir + f"/{name}/dist/{name}.apk")
-	compile_dex_additions("classes_arzmod", "classes7.dex")
+	compile_dex_additions("classes_arzmod", f"classes{get_new_smali_dir_index(app_dir)}.dex")
 
 
 
 
 def exitWithError(msg):
 	print(msg)
+	print(f"Build settings: Project = {'ARIZONA' if project == ARIZONA_MOBILE else 'RODINA'} | ARZMOD = {arzmodbuild} | UseARM64 = {usearm64}")
 	print("Press Enter for exit.")
 	input()
-	# exit(1)
+	exit(1)
 
 
 if __name__ == "__main__":
