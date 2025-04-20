@@ -6,6 +6,8 @@ key/keystore.jks
 # Ignore builds
 arzmob-classes/*.jar
 app-debug/
+native/libs
+native/obj
 *.apk
 
 # Ignore trash

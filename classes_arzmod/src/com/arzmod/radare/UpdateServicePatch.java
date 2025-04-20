@@ -74,10 +74,10 @@ public class UpdateServicePatch {
                         currentValue = homeStateStore.getValue();
                     } while (!homeStateStore.compareAndSet(
                         currentValue, 
-                        currentValue.copy(false, "", "", value, false)
+                        currentValue.copy(false, "", "", value, false, true)
                     ));
                     attempts[0]++;
-                    handler.postDelayed(this, 1000); // Повторная попытка каждую секунду
+                    handler.postDelayed(this, 1000);
                 }
             }
         };

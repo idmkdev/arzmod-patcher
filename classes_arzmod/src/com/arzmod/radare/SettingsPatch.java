@@ -435,11 +435,6 @@ public class SettingsPatch {
                                     .show();
                                 return true;
                             }
-                            default: new AlertDialog.Builder(context)
-                                    .setTitle("Выбрана версия " + choosenVersion)
-                                    .setMessage("С данной версии нельзя зайти на любой другой сервер кроме аризоновского через меню.")
-                                    .setPositiveButton("OK", null)
-                                    .show();
                         }
 
                     }

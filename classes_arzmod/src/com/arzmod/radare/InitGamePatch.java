@@ -25,11 +25,21 @@ import com.arizona.game.BuildConfig;
 import com.arizona.launcher.util.UtilsKt;
 import ru.mrlargha.commonui.core.UIElementID;
 import androidx.preference.PreferenceManager;
+import org.json.JSONObject;
 
 public class InitGamePatch {
     private static Context context;
     private static String CONNECT_TAG = "release";
     private static String ACTUAL_VERSION = BuildConfig.VERSION_NAME;
+
+    private static boolean isAssetExists(Context context, String fileName) {
+        try {
+            context.getAssets().open("arzmod/" + fileName).close();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
 
     public static void copyFileFromAssets(Context context, String fileName, String outputPath) throws IOException {
         AssetManager assetManager = context.getAssets();
@@ -140,7 +150,17 @@ public class InitGamePatch {
             }
             try {
                 String outputFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/profile.json";
-                copyFileFromAssets(context, "profile"+ (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : "")+".json", outputFile);
+                String assetFile = "profile"+ (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : "")+".json";
+                Log.d("arzmod-initgame-module", "Loading profile ver: " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : "") + ", from file: " + assetFile + ", gameArchiveCode: " + defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE));
+                if (isAssetExists(context, assetFile)) {
+                    copyFileFromAssets(context, assetFile, outputFile);
+                } else {
+                    copyFileFromAssets(context, "profile.json", outputFile);
+                    SharedPreferences.Editor editor = defaultSharedPreferences.edit();
+                    editor.putInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE);
+                    editor.apply();
+                    Log.d("arzmod-initgame-module", "Loading default profile");
+                }
             } catch(IOException | SecurityException e) {
                 e.printStackTrace();
                 Main.moduleDialog("Ошибка при копировании файла: " + e.getMessage() + "\n\nПопробуйте вручную создать папки если их не существует. Если папка compat существует, пересоздайте её через любой проводник");
@@ -161,13 +181,29 @@ public class InitGamePatch {
                 loadLib("samp");
                 if(isMonetloaderWork) loadLib("monetloader");
             } else {
+                loadLib("samp" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : ""));
+                try {
+                    String settingsPath = "/Android/data/" + packageName + "/files/SAMP/settings.json";
+                    File settingsFile = new File(Environment.getExternalStorageDirectory(), settingsPath);
+                    if (settingsFile.exists()) {
+                        JSONObject settings = new JSONObject(new String(Files.readAllBytes(settingsFile.toPath())));
+                        JSONObject server = settings.getJSONObject("client").getJSONObject("server");
+                        int id = server.getInt("id");
+                        int serverid = server.getInt("serverid");
+                        
+                        if (id == 0 && serverid == 0) {
+                            loadLib("packet_hook");
+                            Log.d("arzmod-initgame-module", "Loading custom server fix...");
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e("arzmod-initgame-module", "Ошибка при проверке settings.json: " + e.getMessage());
+                }
                 if(isMonetloaderWork)
                 {
-                    loadLib("samp" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : ""));
                     loadLib("monetloader");
                     loadLib("AML");
                 }
-                else loadLib("sampv");
             }
             if (Objects.equals(cpu, "arm64-v8a")) {
                 loadLib("bass");
@@ -184,10 +220,16 @@ public class InitGamePatch {
                 } 
             }
 
+            
+            File profileFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/profile.json");
+            if (profileFile.exists()) {
+                deleteRecursively(profileFile);
+            }
+
             UtilsKt.initZip(context);
 
             Log.d("arzmod-initgame-module", "game started. by ARZMOD (arzmod.com) & Community (t.me/cleodis)");
-        } catch (LinkageError e) {
+        } catch (Exception e) {
             e.printStackTrace();
             Log.e("arzmod-initgame-module", "Public firstTimePatches has errors");
         } 
