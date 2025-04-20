@@ -24,9 +24,9 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 working_dir = os.getcwd().replace('\\', '/')
 app_dir, name, project, usearm64, arzmodbuild, launcher_verlua, launcher_ver, launcher_vername = None, "app", 0, False, False, 0, 0, "None"
 
-arz_miami_path = "smali_classes5"
-arz_src_path = "smali_classes4"
-arz_ui_path = "smali_classes6"
+arz_miami_path = "smali_classes4"
+arz_src_path = "smali_classes3"
+arz_ui_path = "smali_classes5"
 
 ARIZONA_MOBILE = 0
 RODINA_MOBILE = 1
@@ -357,49 +357,49 @@ def remove_line_numbers(file_path):
 		exitWithError(f"Произошла ошибка: {e}")
 
 def replace_block_in_file(file_path, old_block, new_line, after_line=None):
-    try:
-        remove_line_numbers(file_path)
-        time.sleep(1)
+	try:
+		remove_line_numbers(file_path)
+		time.sleep(1)
 
-        with open(file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
+		with open(file_path, 'r', encoding='utf-8') as file:
+			content = file.read()
 
-        old_block = re.sub(r'\s+', ' ', old_block.strip())
-        pattern = re.escape(old_block)
-        pattern = re.sub(r'\\ ', r'\\s+', pattern)
-        new_line = new_line.strip()
+		old_block = re.sub(r'\s+', ' ', old_block.strip())
+		pattern = re.escape(old_block)
+		pattern = re.sub(r'\\ ', r'\\s+', pattern)
+		new_line = new_line.strip()
 
-        if after_line is not None:
-            after_line = re.escape(after_line.strip())
-            after_line_pattern = re.compile(after_line, re.DOTALL | re.IGNORECASE)
-            match = after_line_pattern.search(content)
-            if match:
-                start_pos = match.end()
-                content_after = content[start_pos:]
-                new_content_after, count = re.subn(pattern, new_line, content_after, count=1, flags=re.DOTALL | re.IGNORECASE)
-                new_content = content[:start_pos] + new_content_after
-            else:
-                exitWithError("Строка после которой нужно выполнить замену не найдена.")
-                return
-        else:
-            new_content, count = re.subn(pattern, new_line, content, flags=re.DOTALL | re.IGNORECASE)
+		if after_line is not None:
+			after_line = re.escape(after_line.strip())
+			after_line_pattern = re.compile(after_line, re.DOTALL | re.IGNORECASE)
+			match = after_line_pattern.search(content)
+			if match:
+				start_pos = match.end()
+				content_after = content[start_pos:]
+				new_content_after, count = re.subn(pattern, new_line, content_after, count=1, flags=re.DOTALL | re.IGNORECASE)
+				new_content = content[:start_pos] + new_content_after
+			else:
+				exitWithError("Строка после которой нужно выполнить замену не найдена.")
+				return
+		else:
+			new_content, count = re.subn(pattern, new_line, content, flags=re.DOTALL | re.IGNORECASE)
 
-        if count == 0:
-            print("-------------------DEBUG-------------------")
-            print("file_path:", file_path)
-            print("old_block:", old_block)
-            print("new_line:", new_line)
-            print("Замена не выполнена: блок не найден.")
-            print("-------------------------------------------")
-            exitWithError("Замена не выполнена: блок не найден.")
-        else:
-            print(f"Произведено {count} замен блоков кода в файле {file_path}")
+		if count == 0:
+			print("-------------------DEBUG-------------------")
+			print("file_path:", file_path)
+			print("old_block:", old_block)
+			print("new_line:", new_line)
+			print("Замена не выполнена: блок не найден.")
+			print("-------------------------------------------")
+			exitWithError("Замена не выполнена: блок не найден.")
+		else:
+			print(f"Произведено {count} замен блоков кода в файле {file_path}")
 
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(new_content)
+		with open(file_path, 'w', encoding='utf-8') as file:
+			file.write(new_content)
 
-    except Exception as e:
-        exitWithError(f"Произошла ошибка: {e}")
+	except Exception as e:
+		exitWithError(f"Произошла ошибка: {e}")
 
 
 def insert_smali_code_after_line(file_path, method_name, target_line, smali_code):
@@ -558,52 +558,52 @@ def update_xml_attribute(file_path, namespace, search_path, attribute, new_value
 		exitWithError("Атрибут не найден")
 
 def count_methods_in_smali(file_path):
-    method_pattern = re.compile(r'^\.method')
-    count = 0
-    with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
-        for line in file:
-            if method_pattern.match(line.strip()):
-                count += 1
-    return count
+	method_pattern = re.compile(r'^\.method')
+	count = 0
+	with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
+		for line in file:
+			if method_pattern.match(line.strip()):
+				count += 1
+	return count
 
 def count_methods_in_dir(directory):
-    total_methods = 0
-    smali_files = []
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith('.smali'):
-                file_path = os.path.join(root, file)
-                method_count = count_methods_in_smali(file_path)
-                total_methods += method_count
-                smali_files.append((file_path, method_count))
-    return total_methods, smali_files
+	total_methods = 0
+	smali_files = []
+	for root, _, files in os.walk(directory):
+		for file in files:
+			if file.endswith('.smali'):
+				file_path = os.path.join(root, file)
+				method_count = count_methods_in_smali(file_path)
+				total_methods += method_count
+				smali_files.append((file_path, method_count))
+	return total_methods, smali_files
 
 def get_new_smali_dir_index(base_dir):
-    index = 2
-    while os.path.exists(os.path.join(base_dir, f"smali_classes{index}")):
-        index += 1
-    return index
+	index = 2
+	while os.path.exists(os.path.join(base_dir, f"smali_classes{index}")):
+		index += 1
+	return index
 
 def redistribute_smali_files(source_folder, base_dir, method_limit=50000):
-    current_methods, smali_files = count_methods_in_dir(source_folder)
-    if current_methods <= method_limit:
-        return
-    
-    new_smali_dir = os.path.join(base_dir, f"smali_classes{get_new_smali_dir_index(base_dir)}") 
-    new_smali_path = os.path.join(base_dir, new_smali_dir)
-    os.makedirs(new_smali_path, exist_ok=True)
-    
-    moved_methods = 0
-    for file_path, method_count in sorted(smali_files, key=lambda x: -x[1]):
-        if current_methods - moved_methods <= method_limit:
-            break
-        rel_path = os.path.relpath(file_path, source_folder)
-        new_path = os.path.join(new_smali_path, rel_path)
-        os.makedirs(os.path.dirname(new_path), exist_ok=True)
-        shutil.move(file_path, new_path)
-        moved_methods += method_count
-    
-    print(f"Часть smali-файлов из {source_folder} перемещена в {new_smali_path}")
+	current_methods, smali_files = count_methods_in_dir(source_folder)
+	if current_methods <= method_limit:
+		return
+	
+	new_smali_dir = os.path.join(base_dir, f"smali_classes{get_new_smali_dir_index(base_dir)}") 
+	new_smali_path = os.path.join(base_dir, new_smali_dir)
+	os.makedirs(new_smali_path, exist_ok=True)
+	
+	moved_methods = 0
+	for file_path, method_count in sorted(smali_files, key=lambda x: -x[1]):
+		if current_methods - moved_methods <= method_limit:
+			break
+		rel_path = os.path.relpath(file_path, source_folder)
+		new_path = os.path.join(new_smali_path, rel_path)
+		os.makedirs(os.path.dirname(new_path), exist_ok=True)
+		shutil.move(file_path, new_path)
+		moved_methods += method_count
+	
+	print(f"Часть smali-файлов из {source_folder} перемещена в {new_smali_path}")
 
 def set_package_name(old, new):
 	print(f"Меняем имя пакета с {old} на {new}")
@@ -754,7 +754,7 @@ def arzmod_patch():
 
 	if arzmodbuild:		
 		# TEXT PATCH
-		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u0414\u0430\u043d\u043d\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u0430, \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e", r"\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u0020\u043a\u043b\u0438\u0435\u043d\u0442\u0430\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0020\u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u0441\u044f\u0020\u0441\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u043c\u002c\u0020\u0447\u0442\u043e\u0431\u044b\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043d\u0435\u0020\u0431\u044b\u043b\u043e\u0020\u043b\u0438\u0448\u043d\u0438\u0445\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u043e\u0432\u002e\u0020\u041f\u0440\u043e\u0447\u0438\u0442\u0430\u0442\u044c\u0020\u043f\u043e\u0434\u0440\u043e\u0431\u043d\u043e\u0441\u0442\u0438\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f\u0020\u043c\u043e\u0436\u043d\u043e\u0020\u0432\u0020\u0074\u002e\u006d\u0065\u002f\u0043\u006c\u0065\u006f\u0041\u0072\u0069\u007a\u006f\u006e\u0061")
+		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u0414\u0430\u043d\u043d\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u0430, \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043d\u043e\u0432\u0443", r"\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u0020\u043a\u043b\u0438\u0435\u043d\u0442\u0430\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0020\u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u0441\u044f\u0020\u0441\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u043c\u002c\u0020\u0447\u0442\u043e\u0431\u044b\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043d\u0435\u0020\u0431\u044b\u043b\u043e\u0020\u043b\u0438\u0448\u043d\u0438\u0445\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u043e\u0432\u002e\u0020\u041f\u0440\u043e\u0447\u0438\u0442\u0430\u0442\u044c\u0020\u043f\u043e\u0434\u0440\u043e\u0431\u043d\u043e\u0441\u0442\u0438\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f\u0020\u043c\u043e\u0436\u043d\u043e\u0020\u0432\u0020\u0074\u002e\u006d\u0065\u002f\u0043\u006c\u0065\u006f\u0041\u0072\u0069\u007a\u006f\u006e\u0061")
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0432\u0430\u0448\u0435 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0438 \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430", r"\u041b\u0430\u0443\u043d\u0447\u0435\u0440\u0443\u0020\u043d\u0435\u0020\u0443\u0434\u0430\u043b\u043e\u0441\u044c\u0020\u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c\u0020\u043d\u0443\u0436\u043d\u0443\u044e\u0020\u0435\u043c\u0443\u0020\u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u002c\u0020\u0441\u0435\u0440\u0432\u0435\u0440\u0430\u0020\u0041\u0052\u005a\u004d\u004f\u0044\u0020\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e\u0020\u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0020\u0415\u0441\u043b\u0438\u0020\u0441\u0020\u0432\u0430\u0448\u0435\u043c\u0020\u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0020\u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435\u043c\u0020\u0432\u0441\u0451\u0020\u0445\u043e\u0440\u043e\u0448\u043e\u002c\u0020\u043d\u0430\u0436\u043c\u0438\u0442\u0435\u0020\u043a\u043d\u043e\u043f\u043a\u0443\u0020\u0027\u0432\u044b\u0439\u0442\u0438\u0027\u0020\u0415\u0441\u043b\u0438\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043e\u0441\u0442\u0430\u043b\u0438\u0441\u044c\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u044b\u002c\u0020\u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435\u0020\u0432\u0020\u0433\u0440\u0443\u043f\u043f\u0443\u0020\u002d\u0020\u0074\u002e\u006d\u0065\u002f\u0063\u006c\u0065\u006f\u0064\u0069\u0073")
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u0412\u044b\u0439\u0442\u0438", r"\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c")
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u041e\u0448\u0438\u0431\u043a\u0430 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f \u043a \u0441\u0435\u0440\u0432\u0435\u0440\u0443 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f", r"\u041b\u0430\u0443\u043d\u0447\u0435\u0440\u0443\u0020\u043d\u0435\u0020\u0443\u0434\u0430\u043b\u043e\u0441\u044c\u0020\u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c\u0020\u043d\u0443\u0436\u043d\u0443\u044e\u0020\u0435\u043c\u0443\u0020\u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u002c\u0020\u0441\u0435\u0440\u0432\u0435\u0440\u0430\u0020\u0041\u0052\u005a\u004d\u004f\u0044\u0020\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e\u0020\u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0020\u0415\u0441\u043b\u0438\u0020\u0441\u0020\u0432\u0430\u0448\u0435\u043c\u0020\u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0020\u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435\u043c\u0020\u0432\u0441\u0451\u0020\u0445\u043e\u0440\u043e\u0448\u043e\u002c\u0020\u043d\u0430\u0436\u043c\u0438\u0442\u0435\u0020\u043a\u043d\u043e\u043f\u043a\u0443\u0020\u0027\u0432\u044b\u0439\u0442\u0438\u0027\u0020\u0415\u0441\u043b\u0438\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043e\u0441\u0442\u0430\u043b\u0438\u0441\u044c\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u044b\u002c\u0020\u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435\u0020\u0432\u0020\u0433\u0440\u0443\u043f\u043f\u0443\u0020\u002d\u0020\u0074\u002e\u006d\u0065\u002f\u0063\u006c\u0065\u006f\u0064\u0069\u0073")
@@ -817,13 +817,13 @@ def arzmod_patch():
 		""")
 		replace_code_between_lines(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", ".method private static final handleMessage$lambda$0(Lcom/arizona/launcher/MainEntrench;)Lkotlin/Unit;", ".end method", """
 			.method private static final handleMessage$lambda$0(Lcom/arizona/launcher/MainEntrench;)Lkotlin/Unit;
-			    .locals 1
-			    invoke-static {p0}, Lcom/arizona/launcher/MainEntrench;->access$hideDialog(Lcom/arizona/launcher/MainEntrench;)V
-			    const/4 v0, 0x0
-			    invoke-static {v0}, Lcom/arzmod/radare/UpdateServicePatch;->setHomeUi(Z)V
-			    sget-object p0, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;
-			    return-object p0
-		    .end method
+				.locals 1
+				invoke-static {p0}, Lcom/arizona/launcher/MainEntrench;->access$hideDialog(Lcom/arizona/launcher/MainEntrench;)V
+				const/4 v0, 0x0
+				invoke-static {v0}, Lcom/arzmod/radare/UpdateServicePatch;->setHomeUi(Z)V
+				sget-object p0, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;
+				return-object p0
+			.end method
 		""")
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", "Lcom/arizona/launcher/MainEntrench$IncomingHandler$$ExternalSyntheticLambda4", "Lcom/arizona/launcher/MainEntrench$IncomingHandler$$ExternalSyntheticLambda0")
 		if project == ARIZONA_MOBILE:
@@ -1053,9 +1053,6 @@ def arzmod_patch():
 		replace_files(working_dir + "/resource/ic_chat_button", "ic_btn_shop")
 		replace_files(working_dir + "/resource/remote_config_defaults", "remote_config_defaults")
 
-	# FOR GAME WORK WITHOUT MONETLOADER ON NEW VERSION (old costyl)
-	shutil.copy(f'{app_dir}/lib/armeabi-v7a/libsamp.so', f'{app_dir}/lib/armeabi-v7a/libsampv.so')
-
 	# ADD GAME LIBS
 	if usearm64:
 		add_patched_lib("libluajit-5.1.so", "arm64-v8a")
@@ -1064,6 +1061,7 @@ def arzmod_patch():
 		shutil.rmtree(app_dir + "/lib/arm64-v8a")
 		add_patched_lib("libluajit-5.1.so", "armeabi-v7a")
 		add_patched_lib("libmonetloader.so", "armeabi-v7a")
+		add_patched_lib("libpacket_hook.so", "armeabi-v7a")
 		add_patched_lib("libAML.so", "armeabi-v7a")
 	
 		# ADD GAME VERSION
