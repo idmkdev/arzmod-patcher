@@ -98,6 +98,13 @@ public class UpdateServicePatch {
         return false;
     }
 
+    public static boolean isFreeLaunch() {
+        if(SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_FREE_LAUNCH)) {
+            return true;
+        }
+        return false;
+    }
+
     public void checkUserFiles(JSONArray jsonArray) {
         if(SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_CLEAR_MODE)) 
         {

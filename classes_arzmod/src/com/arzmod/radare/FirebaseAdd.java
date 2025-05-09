@@ -23,8 +23,10 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import com.arizona.launcher.MainEntrench;
 import com.arizona.launcher.ArizonaApplication;
 import com.arizona.launcher.model.settings.SettingsConstants;
+import com.arizona.game.R;
 
 public class FirebaseAdd extends FirebaseMessagingService {
     private static final String TAG = "arzmod-firebase-module";
@@ -100,10 +102,99 @@ public class FirebaseAdd extends FirebaseMessagingService {
                         String token = task.getResult();
                         Log.d(TAG, "Current FCM Token: " + token);
                         SettingsPatch.getSettingsPreferences().edit().putString(SettingsConstants.TOKEN, token).apply();
+                        FirebaseMessaging.getInstance().getToken()
+                            .addOnCompleteListener(new OnCompleteListener<String>() {
+                                @Override
+                                public void onComplete(@NonNull Task<String> task) {
+                                    if (!task.isSuccessful()) {
+                                        Log.e(TAG, "Failed to get FCM token on main server", task.getException());
+                                        return;
+                                    }
+                                    String token = task.getResult();
+                                    Log.d(TAG, "FCM Token on main server: " + token);
+                                }
+                            });
                     }
                 });
         }
         else Log.e(TAG, "messageApp is null");
     }
 
+
+    public static void createNotification(Context context, RemoteMessage remoteMessage) {
+        String title = null;
+        String body = null;
+        String imageUrl = null;
+        String clickUrl = null;
+
+        RemoteMessage.Notification notification = remoteMessage.getNotification();
+        if (notification != null) {
+            title = notification.getTitle();
+            body = notification.getBody();
+            if (notification.getImageUrl() != null) {
+                imageUrl = notification.getImageUrl().toString();
+            }
+        }
+
+        if (title == null) title = remoteMessage.getData().get("title");
+        if (body == null) body = remoteMessage.getData().get("body");
+        if (imageUrl == null) imageUrl = remoteMessage.getData().get("imageUrl");
+        clickUrl = remoteMessage.getData().get("url");
+
+        Log.d(TAG, "Notification title: " + title + " | Body: " + body + " | Image URL: " + imageUrl + " | Click URL: " + clickUrl);
+
+        Intent intent;
+        if (clickUrl != null && !clickUrl.isEmpty()) {
+            intent = new Intent(Intent.ACTION_VIEW, Uri.parse(clickUrl));
+        } else {
+            intent = new Intent(context, MainEntrench.class);
+        }
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent);
+
+
+        if (imageUrl != null) {
+            try {
+                URL url = new URL(imageUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setDoInput(true);
+                connection.connect();
+                InputStream input = connection.getInputStream();
+                Bitmap bitmap = BitmapFactory.decodeStream(input);
+                builder.setLargeIcon(bitmap);
+                builder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bitmap));
+            } catch (Exception e) {
+                Log.e(TAG, "Error loading notification image", e);
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "Default channel",
+                NotificationManager.IMPORTANCE_DEFAULT
+            );
+            NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+
+        NotificationManager notificationManager = 
+            (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.notify(0, builder.build());
+        }
+    }
 }

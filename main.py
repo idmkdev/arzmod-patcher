@@ -140,7 +140,7 @@ def find_pattern(data: bytes, pattern: str) -> bool:
 
 	return False
 
-def add_game_version(version):
+def _check_add_game_version(version):
 	try:
 		if isinstance(version, str):
 			version = ""
@@ -173,6 +173,15 @@ def add_game_version(version):
 				exitWithError(f"Ошибка при проверке библиотеки: {e}")
 		else:
 			exitWithError("Файл библиотеки не совпадает с именем хука, проверка не возможна.")
+	except Exception as e:
+		exitWithError(f"Ошибка при обработке файлов: {e}")
+
+def add_game_version(version):
+	try:
+		if isinstance(version, str):
+			version = ""
+
+		libpath = add_patched_lib(f"libsamp{str(version)}.so", "armeabi-v7a")
 	except Exception as e:
 		exitWithError(f"Ошибка при обработке файлов: {e}")
 
@@ -605,6 +614,42 @@ def redistribute_smali_files(source_folder, base_dir, method_limit=50000):
 	
 	print(f"Часть smali-файлов из {source_folder} перемещена в {new_smali_path}")
 
+def build_native_lib(folder_name, arch):
+    folder_path = os.path.join(working_dir, folder_name)
+    if not os.path.exists(folder_path):
+        exitWithError(f"Папка {folder_name} не найдена")
+
+    jni_path = os.path.join(folder_path, "jni")
+    libs_path = os.path.join(folder_path, "libs", arch)
+    target_lib_path = os.path.join(app_dir, "lib", arch)
+
+    os.makedirs(target_lib_path, exist_ok=True)
+
+    if os.path.exists(jni_path):
+        try:
+            run_command("ndk-build", cwd=folder_path)
+        except Exception as e:
+            exitWithError(f"Ошибка при сборке через ndk-build: {str(e)}")
+        
+        if not os.path.exists(libs_path):
+            exitWithError(f"После сборки не найдена папка libs/{arch}")
+    else:
+        if not os.path.exists(libs_path):
+            exitWithError(f"Не найдена папка libs/{arch} с готовыми библиотеками")
+
+    found_libs = False
+    for file in os.listdir(libs_path):
+        if file.endswith(".so"):
+            src_file = os.path.join(libs_path, file)
+            dst_file = os.path.join(target_lib_path, file)
+            shutil.copy2(src_file, dst_file)
+            found_libs = True
+            print(f"Скопирована библиотека: {file}")
+
+    if not found_libs:
+        exitWithError(f"Не найдено .so файлов в {libs_path}")
+
+
 def set_package_name(old, new):
 	print(f"Меняем имя пакета с {old} на {new}")
 	search_and_replace(app_dir + '/AndroidManifest.xml', old, new)
@@ -697,12 +742,10 @@ def sign_apk(rename, keypass):
 
 def compile_dex_additions(dex_name, file_name=None):
 	run_command(f"python dexcompile.py {dex_name}", cwd=working_dir)
-	shutil.move(f"{working_dir}/{dex_name}/out/{dex_name}.dex", app_dir)
-	if os.path.exists(f"{app_dir}/{file_name}"):
-		exitWithError("Файл уже существует")
-		os.remove(f"{app_dir}/{file_name}")
-	if file_name is not None:
-		os.rename(f"{app_dir}/{dex_name}.dex", f"{app_dir}/{file_name}")
+	if file_name is not None and os.path.exists(f"{app_dir}/{file_name}"):
+		print("Файл уже существует, заменяем")
+	shutil.move(f"{working_dir}/{dex_name}/out/{dex_name}.dex", f"{app_dir}/{file_name if file_name is not None else dex_name + '.dex'}")
+
 
 def update_classes(apk_path):
 	if not os.path.isfile(apk_path):
@@ -743,14 +786,16 @@ def arzmod_patch():
 	miami_path = app_dir + f"/{arz_miami_path}"
 	src_path = app_dir + f"/{arz_src_path}"
 	ui_path = app_dir + f"/{arz_ui_path}"
+	manifest_path = app_dir + '/AndroidManifest.xml'
 
 	# PACKAGE NAME PATCH
 	package_name = f"{'com.arizona.game' if project == ARIZONA_MOBILE else 'com.rodina.game'}{'.git' if not arzmodbuild  else ''}"
 	set_package_name("com.arizona21.game.web" if project == ARIZONA_MOBILE else "com.rodina21.game.web", package_name)
+	set_xml_string("app_name", "ARIZONA MOD" if project == ARIZONA_MOBILE else "RODINA MOD")
 
 	# TEXT PATCH
 	search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u0444\u0430\u0439\u043b\u043e\u0432 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0430, \u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a", r"\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430\u0020\u0444\u0430\u0439\u043b\u043e\u0432\u0020\u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0430\u002c\u0020\u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a\u002e\u0020\u041f\u043e\u0441\u043b\u0435\u0020\u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u043a\u0430\u002c\u0020\u043e\u0431\u043d\u043e\u0432\u0438\u0442\u0435\u0020\u0438\u0433\u0440\u0443\u0020\u0434\u043b\u044f\u0020\u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u043e\u0439\u0020\u0440\u0430\u0431\u043e\u0442\u044b\u002e")
-	search_and_replace(miami_path + "/com/miami/game/feature/download/dialog/ui/setup/DescriptionTextKt.smali", r". \u0412\u044b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c?", r". \u0412\u044b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c? \u0415\u0441\u043b\u0438\u0020\u0432\u044b\u0020\u0445\u043e\u0442\u0438\u0442\u0435\u0020\u043f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u0020\u002d\u0020\u043e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u0435\u0020\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0443\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439\u0020\u043a\u0435\u0448\u0430\u0020\u0438\u0433\u0440\u044b\u0020\u0432\u0020\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445\u0020\u002d\u0020\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438\u0020\u0041\u0052\u005a\u004d\u004f\u0044")
+	search_and_replace(miami_path + "/com/miami/game/feature/download/dialog/ui/setup/DescriptionTextKt.smali", r". \u0412\u044b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c?", r" \u002e\u0020\u0412\u044b\u0020\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0020\u0445\u043e\u0442\u0438\u0442\u0435\u0020\u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c\u003f\u0020\u0415\u0441\u043b\u0438\u0020\u0432\u044b\u0020\u0445\u043e\u0442\u0438\u0442\u0435\u0020\u043f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u0020\u002d\u0020\u043d\u0430\u0436\u043c\u0438\u0442\u0435\u0020\u043a\u043d\u043e\u043f\u043a\u0443\u0020\u041e\u0422\u041c\u0415\u041d\u0410\u002e\u0020\u0020\u0422\u0430\u043a\u0020\u0436\u0435\u0020\u043c\u043e\u0436\u043d\u043e\u0020\u043f\u043e\u043b\u043d\u043e\u0441\u0442\u044c\u044e\u0020\u043e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c\u0020\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0443\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439\u0020\u043a\u0435\u0448\u0430\u0020\u0438\u0433\u0440\u044b\u0020\u0432\u0020\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445\u0020\u002d\u0020\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438\u0020\u0041\u0052\u005a\u004d\u004f\u0044")
 
 	if arzmodbuild:		
 		# TEXT PATCH
@@ -767,7 +812,6 @@ def arzmod_patch():
 		set_xml_string("google_crash_reporting_api_key", "AIzaSyAIav21gmzddU7GlZL-4oodtbAzkzclCmg")
 		set_xml_string("google_storage_bucket", "arzmod.firebasestorage.app")
 		set_xml_string("project_id", "arzmod")
-		manifest_path = app_dir + '/AndroidManifest.xml'
 		tree = ET.parse(manifest_path)
 		root = tree.getroot()
 		ET.register_namespace("android", "http://schemas.android.com/apk/res/android")
@@ -783,6 +827,10 @@ def arzmod_patch():
 		application = root.find("application")
 		application.append(service)
 		tree.write(manifest_path, encoding="utf-8", xml_declaration=True)
+		insert_smali_code_after_line(src_path + "/com/arizona/launcher/MessagingService.smali", ".method public onMessageReceived", "check-cast v1, Landroid/content/Context;", """
+			invoke-static {v1, p1}, Lcom/arzmod/radare/FirebaseAdd;->createNotification(Landroid/content/Context;Lcom/google/firebase/messaging/RemoteMessage;)V
+			return-void
+		""")
 
 
 		# ARZMOD TECH PATCH
@@ -791,6 +839,12 @@ def arzmod_patch():
 		search_and_replace(miami_path + "/com/miami/game/feature/home/ui/model/HomeUiState$Companion.smali", "https://arizona-rp.com/shop" if project == ARIZONA_MOBILE else "https://rodina-rp.com/shop", "https://t.me/cleodis")
 		search_and_replace(ui_path + "/ru/mrlargha/commonui/elements/hud/presentation/Hud.smali", "arizona-rp.com" if project == ARIZONA_MOBILE else "rodina-rp.com", "arzmod.com")
 		if project == ARIZONA_MOBILE: search_and_replace(ui_path + "/ru/mrlargha/commonui/elements/hud/presentation/api/HudApi.smali", "desktop/ping/Arizona/ping.json", "https://radarebot.hhos.net/api/serverlist")
+		search_and_replace_after(miami_path + "/com/miami/game/core/connection/resolver/data/ServersList.smali", ".method public final newsServers", "main_api", "main_arizona_news")
+		search_and_replace_after(miami_path + "/com/miami/game/core/connection/resolver/data/ServersList.smali", ".method public final newsServers", "reserve_api", "main_arizona_news")
+		insert_smali_code_after_line(src_path + "/com/arizona/launcher/MainEntrench.smali", ".method protected onCreate", "invoke-super {p0, p1}, Lcom/arizona/launcher/Hilt_MainEntrench;->onCreate(Landroid/os/Bundle;)V", """
+			invoke-static {}, Lcom/arzmod/radare/ApplicationStart;->showBanner()V
+		""")
+
 
 		# UPDATESERVICE PATCH (ARZMOD FILESERVERS)
 		search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "data/files", "data")
@@ -826,19 +880,32 @@ def arzmod_patch():
 			.end method
 		""")
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", "Lcom/arizona/launcher/MainEntrench$IncomingHandler$$ExternalSyntheticLambda4", "Lcom/arizona/launcher/MainEntrench$IncomingHandler$$ExternalSyntheticLambda0")
-		if project == ARIZONA_MOBILE:
-			search_and_replace(src_path + "/com/arizona/launcher/util/FileServers.smali", "/game/release/", "/")
-			search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "launcher_new/app-arizona-release_web.apk", "launcher_new/app-debug.apk")
-			search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "app-arizona-release_web.apk", f"/data/{package_name}/files/app-debug.apk")
-			search_and_replace(src_path + "/com/arizona/launcher/UpdateActivity$IncomingHandler.smali", "app-arizona-release_web.apk", "app-debug.apk")
 
-		elif project == RODINA_MOBILE:
-			search_and_replace(src_path + "/com/arizona/launcher/util/FileServers.smali", "/release/", "/")
-			search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "launcher_new/app-rodina-release_web.apk", "launcher_new/app-debug.apk")
-			search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "app-rodina-release_web.apk", f"/data/{package_name}/files/app-debug.apk")
-			search_and_replace(src_path + "/com/arizona/launcher/UpdateActivity$IncomingHandler.smali", "app-rodina-release_web.apk", "app-debug.apk")
-		else:
-			exitWithError("project == null?")
+		replace_block_in_file(src_path + "/com/arizona/launcher/UpdateService.smali", """
+		invoke-direct {v3, v4}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
+
+		invoke-virtual {v3, v0}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+
+		move-result-object v0
+
+		const-string v3, ".apk"
+
+		invoke-virtual {v0, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+		move-result-object v0
+
+		invoke-virtual {v0}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+		move-result-object v0
+		""", "")
+
+		search_and_replace(src_path + "/com/arizona/launcher/util/FileServers.smali", "/game/release/" if project == ARIZONA_MOBILE else "/release/", "/")
+		search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "launcher_new/app-arizona-release_web" if project == ARIZONA_MOBILE else "launcher_new/app-rodina-release_web", "launcher_new/app-debug")
+		search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "const-string v4, \"app-arizona-release_web-\"" if project == ARIZONA_MOBILE else "const-string v4, \"app-rodina-release_web-\"", f"const-string v0, \"/data/{package_name}/files/app-debug.apk\"")
+		search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "app-arizona-release_web" if project == ARIZONA_MOBILE else "app-rodina-release_web", f"/data/{package_name}/files/app-debug")
+		search_and_replace(src_path + "/com/arizona/launcher/UpdateActivity$IncomingHandler.smali", "app-arizona-release_web" if project == ARIZONA_MOBILE else "app-rodina-release_web", "app-debug")
+
+		
 
 	else:
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench.smali", " release_web\"", " arzmod_community\"")
@@ -921,6 +988,62 @@ def arzmod_patch():
 			move-result-object v6
 		""", ".method private final connectToTestServer")
 
+		ET.register_namespace("android", "http://schemas.android.com/apk/res/android")
+		tree = ET.parse(manifest_path)
+		root = tree.getroot()
+		application = root.find('.//application')
+		
+		main_entrench = None
+		for activity in application.findall('.//activity'):
+			activity_name = activity.attrib.get('{http://schemas.android.com/apk/res/android}name')
+			if activity_name and ('MainEntrench' in activity_name or 'com.arizona.launcher.MainEntrench' in activity_name):
+				main_entrench = activity
+				break
+		
+		if main_entrench is not None:
+			intent_filter = ET.SubElement(main_entrench, 'intent-filter')
+		
+			action = ET.SubElement(intent_filter, 'action')
+			action.attrib['{http://schemas.android.com/apk/res/android}name'] = 'android.intent.action.VIEW'
+		
+			category1 = ET.SubElement(intent_filter, 'category')
+			category1.attrib['{http://schemas.android.com/apk/res/android}name'] = 'android.intent.category.DEFAULT'
+			
+			category2 = ET.SubElement(intent_filter, 'category')
+			category2.attrib['{http://schemas.android.com/apk/res/android}name'] = 'android.intent.category.BROWSABLE'
+			
+			data = ET.SubElement(intent_filter, 'data')
+			data.attrib['{http://schemas.android.com/apk/res/android}scheme'] = 'samp' if project == ARIZONA_MOBILE else 'crmp'
+			
+			tree.write(manifest_path, encoding='utf-8', xml_declaration=True)
+			print("Intent-filter успешно добавлен")
+		else:
+			print("Activity MainEntrench не найдена")
+			print("\nНайденные activity:")
+			for activity in application.findall('.//activity'):
+				print(activity.attrib.get('{http://schemas.android.com/apk/res/android}name'))
+		insert_smali_code_after_line(src_path + "/com/arizona/launcher/MainEntrench.smali", ".method protected onCreate", "invoke-super {p0, p1}, Lcom/arizona/launcher/Hilt_MainEntrench;->onCreate(Landroid/os/Bundle;)V", """
+			new-instance v2, Lcom/arzmod/radare/ApplicationStart;
+            invoke-direct {v2, p0}, Lcom/arzmod/radare/ApplicationStart;-><init>(Landroid/content/Context;)V
+            invoke-virtual {p0}, Landroid/app/Activity;->getIntent()Landroid/content/Intent;
+            move-result-object v3
+            invoke-virtual {v2, v3}, Lcom/arzmod/radare/ApplicationStart;->handleSampLink(Landroid/content/Intent;)V
+		""")
+
+		append_to_file(src_path + "/com/arizona/launcher/MainEntrench.smali", """
+			.method protected onNewIntent(Landroid/content/Intent;)V
+				.locals 2
+				.param p1, "intent"    # Landroid/content/Intent;
+
+				.prologue
+				invoke-super {p0, p1}, Landroid/app/Activity;->onNewIntent(Landroid/content/Intent;)V
+				new-instance v0, Lcom/arzmod/radare/ApplicationStart;
+				invoke-direct {v0, p0}, Lcom/arzmod/radare/ApplicationStart;-><init>(Landroid/content/Context;)V
+				invoke-virtual {v0, p1}, Lcom/arzmod/radare/ApplicationStart;->handleSampLink(Landroid/content/Intent;)V
+				return-void
+			.end method
+		""")
+
 	# UPDATESERVICE PATCH + classes_arzmod/src/com/arzmod/radare/UpdateServicePatch.java
 	search_and_replace(src_path + "/com/arizona/launcher/UpdateService$isAllFilesOk$1.smali", "iget-boolean v6, p0, Lcom/arizona/launcher/UpdateService$isAllFilesOk$1;->$purgeExtraFiles:Z", "const/4 v6, 0x0")	
 	insert_smali_code_after_line(src_path + "/com/arizona/launcher/MainEntrench.smali", ".method private final checkGameUpdate", ".locals", """
@@ -944,6 +1067,20 @@ def arzmod_patch():
 		new-instance v8, Lcom/arzmod/radare/UpdateServicePatch;
 		invoke-direct {v8}, Lcom/arzmod/radare/UpdateServicePatch;-><init>()V
 		invoke-virtual {v8, v4}, Lcom/arzmod/radare/UpdateServicePatch;->checkUserFiles(Lorg/json/JSONArray;)V
+	""")
+	insert_smali_code_after_line(miami_path + "/com/miami/game/core/app/root/nav/main/MainComponent.smali", ".method public final navigateBackDialog", ".locals", """
+		const/4 v0, 0x0
+		invoke-static {v0}, Lcom/arzmod/radare/UpdateServicePatch;->setHomeUi(Z)V
+	""")
+	insert_smali_code_after_line(miami_path + "/com/miami/game/feature/home/ui/HomeComponent.smali", ".method public final onClickGame", "if-eqz v0, :cond_0", """
+		invoke-static {}, Lcom/arzmod/radare/UpdateServicePatch;->isFreeLaunch()Z
+		move-result v0
+		if-nez v0, :cond_0
+	""")
+	insert_smali_code_after_line(miami_path + "/com/miami/game/feature/home/ui/HomeComponent.smali", ".method public final onClickGame", "if-nez v0, :cond_2", """
+		invoke-static {}, Lcom/arzmod/radare/UpdateServicePatch;->isFreeLaunch()Z
+		move-result v0
+		if-nez v0, :cond_2
 	""")
 
 	# GAMEARCHIVE 1508 COMPATIBLE
@@ -1055,16 +1192,18 @@ def arzmod_patch():
 
 	# ADD GAME LIBS
 	if usearm64:
+		add_asset(f"{working_dir}/resource/profile.json")
 		add_patched_lib("libluajit-5.1.so", "arm64-v8a")
 		add_patched_lib("libmonetloader.so", "arm64-v8a")
 	else:
 		shutil.rmtree(app_dir + "/lib/arm64-v8a")
 		add_patched_lib("libluajit-5.1.so", "armeabi-v7a")
 		add_patched_lib("libmonetloader.so", "armeabi-v7a")
-		add_patched_lib("libpacket_hook.so", "armeabi-v7a")
 		add_patched_lib("libAML.so", "armeabi-v7a")
+		build_native_lib("native", "armeabi-v7a")
 	
 		# ADD GAME VERSION
+		add_asset(f"{working_dir}/resource/profile.json")
 		add_game_version("actual")
 		if project == ARIZONA_MOBILE:
 			add_game_version(1579)
@@ -1086,6 +1225,7 @@ def arzmod_patch():
 
 	print(f"Set update version from {launcher_ver} to {launcher_verlua}")
 	search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", str(hex(int(launcher_ver))), str(hex(int(launcher_verlua))))
+	# search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", "app_version.json", "app_version_test.json")
 	
 	for folder in os.listdir(app_dir):
 		folder_path = os.path.join(app_dir, folder)
@@ -1129,38 +1269,53 @@ if __name__ == "__main__":
 	print("Название файла:", name)
 	print("Папка проекта:", app_dir)
 
-	if "-arzmod" in sys.argv or (arzmod_dev and not "-undsgn" in sys.argv):
-		arzmodbuild = True
+	testmode = False
+	if "-testjava" in sys.argv:
+		if not os.path.exists(app_dir):
+				exitWithError("The project path doesn't exists, you can't running tests")
+		testmode = True
+		dexname = next(f for f in os.listdir(app_dir) if f.endswith('.dex'))
+		compile_dex_additions("classes_arzmod", dexname)
 
-	if "-rodina" in sys.argv:
-		project = RODINA_MOBILE
-	else:
-		project = ARIZONA_MOBILE
+	if "-testnative" in sys.argv:
+		if not os.path.exists(app_dir):
+				exitWithError("The project path doesn't exists, you can't running tests")
+		testmode = True
+		build_native_lib("native", "armeabi-v7a")
 
-	if "-actual" in sys.argv:
-		name = "app-debug"
-		if project == ARIZONA_MOBILE:
-			download_file("https://mob.maz-ins.com/game/release/launcher_new/app-arizona-release_web.apk", working_dir + f"/{name}.apk")
-		elif project == RODINA_MOBILE:
-			download_file("https://mob.azinternal.com/release/launcher_new/app-rodina-release_web.apk", working_dir + f"/{name}.apk")
+	if not testmode:
+		if "-arzmod" in sys.argv or (arzmod_dev and not "-undsgn" in sys.argv):
+			arzmodbuild = True
+
+		if "-rodina" in sys.argv:
+			project = RODINA_MOBILE
 		else:
-			exitWithError("project == null?")
-	else:
-		if not os.path.exists(working_dir + f"/{name}.apk"):
-			exitWithError("The APK doesn't exists")
+			project = ARIZONA_MOBILE
 
-	if "-x64" in sys.argv:
-		usearm64 = True
- 
-	print(f"Build settings: Project = {'ARIZONA' if project == ARIZONA_MOBILE else 'RODINA'} | ARZMOD = {arzmodbuild} | UseARM64 = {usearm64}")
+		if "-actual" in sys.argv:
+			name = "app-debug"
+			if project == ARIZONA_MOBILE:
+				download_file("https://mob.maz-ins.com/game/release/launcher_new/app-arizona-release_web.apk", working_dir + f"/{name}.apk")
+			elif project == RODINA_MOBILE:
+				download_file("https://mob.azinternal.com/release/launcher_new/app-rodina-release_web.apk", working_dir + f"/{name}.apk")
+			else:
+				exitWithError("project == null?")
+		else:
+			if not os.path.exists(working_dir + f"/{name}.apk"):
+				exitWithError("The APK doesn't exists")
 
-	decompile_apk()
+		if "-x64" in sys.argv:
+			usearm64 = True
+	 
+		print(f"Build settings: Project = {'ARIZONA' if project == ARIZONA_MOBILE else 'RODINA'} | ARZMOD = {arzmodbuild} | UseARM64 = {usearm64}")
 
-	if not os.path.exists(app_dir):
-		exitWithError("The project path doesn't exists after try decompile_apk. Why?")
-		
-	arzmod_patch()
-	rename = "app-debug"
+		decompile_apk()
+
+		if not os.path.exists(app_dir):
+			exitWithError("The project path doesn't exists after try decompile_apk. Why?")
+			
+		arzmod_patch()
+		rename = "app-debug"
 
 	build_apk()
 

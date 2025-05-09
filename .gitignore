@@ -2,13 +2,16 @@
 config.py
 arzmod_release.py
 key/keystore.jks
+.vscode/
 
 # Ignore builds
 arzmob-classes/*.jar
 app-debug/
-native/libs
 native/obj
 *.apk
+
+# Ignore native source code (don't use my patterns)
+native/jni
 
 # Ignore trash
 __pycache__/
