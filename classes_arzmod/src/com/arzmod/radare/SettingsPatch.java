@@ -55,6 +55,7 @@ import android.text.TextPaint;
 import android.os.Handler;
 import android.os.Looper;
 import android.app.Activity;
+import com.arzmod.radare.GameVersions;
 
 public class SettingsPatch {
     
@@ -271,7 +272,7 @@ public class SettingsPatch {
     public static final String STREAMER_MODE = "streamer_mode";
     public static final String TOKEN = "token";
     public static final String USE_FULLSCREEN = "use_fullscreen";
-    // maybe arz will delete the files of the old launcher
+    // maybe arz will delete the files of the old launcher (ya dolbaeb prosta)
 
     public static final String MONETLOADER_WORK = "monetloader_work";
     public static final String MODLOADER_STATE = "modloader_state";
@@ -282,6 +283,7 @@ public class SettingsPatch {
     public static final String IS_MODS_MODE = "is_mods_mode";
     public static final String IS_CLEAR_MODE = "is_clear_mode";
     public static final String IS_MODE_MODS = "is_mode_mods";
+    public static final String IS_FREE_LAUNCH = "is_free_launch";
     public static List<AbstractSetting> getSettingsList(SharedPreferences sharedPreferences) {
         List<AbstractSetting> settingsList = new ArrayList<>();
         String cpu = Build.CPU_ABI;
@@ -297,16 +299,12 @@ public class SettingsPatch {
         settingsList.add(new BooleanSetting("[MOD] Режим копирования сборки", IS_MODS_MODE, false, sharedPreferences));
         settingsList.add(new BooleanSetting("[MOD] Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences));
         settingsList.add(new BooleanSetting("[MOD] Проверка обновлений кеша игры", IS_MODE_MODS, true, sharedPreferences));
+        settingsList.add(new BooleanSetting("[MOD] Свободная кнопка запуска", IS_FREE_LAUNCH, false, sharedPreferences));
 
         if (!cpu.equals("arm64-v8a")) {
             settingsList.add(new SelectableValueSetting("[MOD] Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences));
             
-            Map<Integer, String> versions = new HashMap<>();
-            versions.put(BuildConfig.VERSION_CODE,BuildConfig.VERSION_CODE + " actual");            
-            if (BuildConfig.IS_ARIZONA) {
-                versions.put(1579, "1579 arz crash");
-            }
-            versions.put(1508, "1508 " + (BuildConfig.IS_ARIZONA ? "arz" : "rdn") + " crash");
+            Map<Integer, String> versions = GameVersions.getVersions();
             settingsList.add(new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, versions, R.drawable.user_icon_vec, sharedPreferences));
         }
         return settingsList;
@@ -397,6 +395,15 @@ public class SettingsPatch {
                             new AlertDialog.Builder(context)
                                 .setTitle("Режим копирования сборки")
                                 .setMessage("С помощью этой функции вы сможете копировать свою сборку с Android/media/"+packageName+"/files в Android/data/"+packageName+"/files.\nЧтобы удалить сборку используйте функции проверки файлов, и включите функцию очистки неиспользуемых файлов, для очистки остатков.")
+                                .setPositiveButton("OK", null)
+                                .show();
+                        }
+                    } else if (key.equals(IS_FREE_LAUNCH)) {
+                        boolean isEnabled = (Boolean) newValue;
+                        if (isEnabled) {
+                            new AlertDialog.Builder(context)
+                                .setTitle("Режим свободной кнопки запуска")
+                                .setMessage("Данная функция позовляет запустить игру во время проверки обновления")
                                 .setPositiveButton("OK", null)
                                 .show();
                         }
