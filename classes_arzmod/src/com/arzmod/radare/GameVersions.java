@@ -10,6 +10,7 @@ public class GameVersions {
     static {
         versions.put(BuildConfig.VERSION_CODE, BuildConfig.VERSION_CODE + " actual");
         if (BuildConfig.IS_ARIZONA) {
+            versions.put(1601, "1601 april archive");
             versions.put(1579, "1579 arz crash");
         }
         versions.put(1508, "1508 " + (BuildConfig.IS_ARIZONA ? "arz" : "rdn") + " crash");
