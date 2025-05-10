@@ -1,0 +1,11 @@
+{
+    "gtasa_name": "libGTASA.so",
+    "profile_name": "v16.0.1 by ARZMOD (t.me/idmkdev)",
+    "compat_scripts": ["arzmod.lua", "user.lua"],
+    "samp_name": "libsamp1601.so",
+    "receiveignorerpc_pattern": "F0B503AF2DE9000F85B081460068C16A",
+    "cnetgame_ctor_pattern": "F0B503AF2DE9000F89B0D7F80890",
+    "rakclientinterface_netgame_offset": 528,
+    "use_samp_touch_workaround": true,
+    "nveventinsertnewest_offset": 2606320
+}

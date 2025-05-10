@@ -148,6 +148,7 @@ public class InitGamePatch {
             }
             SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
             String packageName = context.getPackageName();
+            String loadedProfile = "";
             
             if (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) == 0) {
                 SharedPreferences.Editor editor = defaultSharedPreferences.edit();
@@ -163,13 +164,27 @@ public class InitGamePatch {
             }
             try {
                 String outputFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/profile.json";
-                copyFileFromAssets(context, "profile.json", outputFile);
+                String assetFile = "profile"+ (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : "")+".json";
+                Log.d("arzmod-initgame-module", "Loading profile ver: " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : "") + ", from file: " + assetFile + ", gameArchiveCode: " + defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE));
+
+                if (isAssetExists(context, assetFile)) {
+                    copyFileFromAssets(context, assetFile, outputFile);
+                    loadedProfile = assetFile;
+                } else {
+                    copyFileFromAssets(context, "profile.json", outputFile);
+                    loadedProfile = "profile.json";
+                    SharedPreferences.Editor editor = defaultSharedPreferences.edit();
+                    editor.putInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE);
+                    editor.apply();
+                    Log.d("arzmod-initgame-module", "Loading default profile");
+                }
+                Log.d("arzmod-initgame-module", "Loaded profile: " + loadedProfile);
             } catch(IOException | SecurityException e) {
                 e.printStackTrace();
                 Main.moduleDialog("Ошибка при копировании файла: " + e.getMessage() + "\n\nПопробуйте вручную создать папки если их не существует. Если папка compat существует, пересоздайте её через любой проводник");
                 Log.e("arzmod-initgame-module", "Ошибка при копировании файла: " + e.getMessage());
             }
-            
+
             boolean isMonetloaderWork = SettingsPatch.getSettingsKeyValue(SettingsPatch.MONETLOADER_WORK);
 
             String cpu = Build.CPU_ABI;
@@ -185,8 +200,7 @@ public class InitGamePatch {
                 if(isMonetloaderWork) loadLib("monetloader");
             } else {
                 loadLib("samp" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : ""));
-                loadLib("arzmod");
-                InitGamePatch.setVersion(String.valueOf(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)));
+                boolean isarzmodloaded=false;
                 try {
                     String settingsPath = "/Android/data/" + packageName + "/files/SAMP/settings.json";
                     File settingsFile = new File(Environment.getExternalStorageDirectory(), settingsPath);
@@ -198,6 +212,11 @@ public class InitGamePatch {
                         
                         if (id == 0 && serverid == 0) {
                             Log.d("arzmod-initgame-module", "Enabling custom server fix...");
+                            if(!isarzmodloaded)
+                            {
+                                loadLib("arzmod");
+                                isarzmodloaded=true;
+                            }
                             InitGamePatch.installPacketsFix();
                         }
                     }
@@ -206,7 +225,16 @@ public class InitGamePatch {
                 }
                 if(isMonetloaderWork)
                 {
-                    versionFix(context);
+                    if(loadedProfile.equals("profile.json") || loadedProfile.isEmpty())
+                    {
+                        if(!isarzmodloaded)
+                        {
+                            loadLib("arzmod");
+                            isarzmodloaded=true;
+                        }
+                        InitGamePatch.setVersion(String.valueOf(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)));
+                        InitGamePatch.versionFix(context);
+                    }
                     loadLib("monetloader");
                     loadLib("AML");
                 }

@@ -140,7 +140,7 @@ def find_pattern(data: bytes, pattern: str) -> bool:
 
 	return False
 
-def _check_add_game_version(version):
+def add_game_version(version, bypasscheck=False):
 	try:
 		if isinstance(version, str):
 			version = ""
@@ -148,6 +148,9 @@ def _check_add_game_version(version):
 		profilepath = f"{working_dir}/resource/profile{str(version)}.json"
 		libpath = add_patched_lib(f"libsamp{str(version)}.so", "armeabi-v7a")
 
+		if bypasscheck:
+			add_asset(profilepath)
+			return
 		with open(profilepath, 'r', encoding='utf-8') as json_file:
 			data = json.load(json_file)
 		
@@ -176,7 +179,7 @@ def _check_add_game_version(version):
 	except Exception as e:
 		exitWithError(f"Ошибка при обработке файлов: {e}")
 
-def add_game_version(version):
+def add_game_version_nocheck(version):
 	try:
 		if isinstance(version, str):
 			version = ""
@@ -1203,9 +1206,9 @@ def arzmod_patch():
 		build_native_lib("native", "armeabi-v7a")
 	
 		# ADD GAME VERSION
-		add_asset(f"{working_dir}/resource/profile.json")
-		add_game_version("actual")
+		add_game_version("actual", True)
 		if project == ARIZONA_MOBILE:
+			add_game_version(1601)
 			add_game_version(1579)
 		add_game_version(1508)
 
