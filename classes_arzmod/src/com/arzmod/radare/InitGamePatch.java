@@ -35,6 +35,7 @@ public class InitGamePatch {
     private static String ACTUAL_VERSION = BuildConfig.VERSION_NAME;
 
     public native static void installPacketsFix();
+    public native static void setVersionString(String string);
     public native static void setVersion(String version);
     public native static void versionFix(Context context);
 
@@ -201,6 +202,15 @@ public class InitGamePatch {
             } else {
                 loadLib("samp" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : ""));
                 boolean isarzmodloaded=false;
+                if(SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_VERSION_HIDED))
+                {
+                    if(!isarzmodloaded)
+                    {
+                        loadLib("arzmod");
+                        isarzmodloaded=true;
+                    }
+                    InitGamePatch.setVersionString("");
+                }
                 try {
                     String settingsPath = "/Android/data/" + packageName + "/files/SAMP/settings.json";
                     File settingsFile = new File(Environment.getExternalStorageDirectory(), settingsPath);
