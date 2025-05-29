@@ -31,9 +31,6 @@ arz_ui_path = "smali_classes5"
 ARIZONA_MOBILE = 0
 RODINA_MOBILE = 1
 
-if arzmod_dev:
-	arzmod_release.check_connection()
-
 
 ############################# HELP FUNCTIONS #######################################
 
@@ -632,8 +629,9 @@ def build_native_lib(folder_name, arch):
         try:
             run_command("ndk-build", cwd=folder_path)
         except Exception as e:
-            exitWithError(f"Ошибка при сборке через ndk-build: {str(e)}")
-        
+            print(f"Ошибка при сборке через ndk-build: {str(e)}")
+            print("Возьмем готовую библиотеку из папки libs/{arch} (если вы хотите собрать библиотеку самостоятельно, попробуйте прочитать native/README.md)")
+
         if not os.path.exists(libs_path):
             exitWithError(f"После сборки не найдена папка libs/{arch}")
     else:
@@ -1272,6 +1270,30 @@ if __name__ == "__main__":
 	print("Название файла:", name)
 	print("Папка проекта:", app_dir)
 
+	if (arzmod_release.build_download if arzmod_dev else config.build_download):
+		try:
+			devices = subprocess.run(['adb', 'devices'], capture_output=True, text=True).stdout.split('\n')[1:]
+			devices = [d.split('\t')[0] for d in devices if d.strip() and 'List of devices' not in d]
+			
+			if not devices or len(devices) > 1:
+				print("Устройства не найдены" if not devices else f"Найдено несколько устройств: {', '.join(devices)}")
+				subprocess.run(['adb', 'disconnect'], capture_output=True)
+				
+				while True:
+					ip_port = input("Введите IP:PORT для подключения (например, 192.168.1.100:5555): ")
+					if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$', ip_port):
+						if 'connected' in subprocess.run(['adb', 'connect', ip_port], capture_output=True, text=True).stdout.lower():
+							print(f"Успешно подключено к {ip_port}")
+							break
+						print("Не удалось подключиться. Попробуйте снова.")
+					else:
+						print("Неверный формат. Используйте формат IP:PORT")
+			else:
+				print(f"Подключено устройство: {devices[0]}")
+		except Exception as e:
+			print(f"Ошибка при работе с ADB: {e}")
+		
+
 	testmode = False
 	if "-testjava" in sys.argv:
 		if not os.path.exists(app_dir):
@@ -1289,6 +1311,9 @@ if __name__ == "__main__":
 	if not testmode:
 		if "-arzmod" in sys.argv or (arzmod_dev and not "-undsgn" in sys.argv):
 			arzmodbuild = True
+		
+		if arzmod_dev and arzmodbuild and "-release" in sys.argv:
+			arzmod_release.check_connection()
 
 		if "-rodina" in sys.argv:
 			project = RODINA_MOBILE

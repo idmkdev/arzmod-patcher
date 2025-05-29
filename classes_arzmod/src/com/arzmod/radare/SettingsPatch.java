@@ -284,28 +284,30 @@ public class SettingsPatch {
     public static final String IS_CLEAR_MODE = "is_clear_mode";
     public static final String IS_MODE_MODS = "is_mode_mods";
     public static final String IS_FREE_LAUNCH = "is_free_launch";
+    public static final String IS_VERSION_HIDED = "is_version_hided";
     public static List<AbstractSetting> getSettingsList(SharedPreferences sharedPreferences) {
         List<AbstractSetting> settingsList = new ArrayList<>();
         String cpu = Build.CPU_ABI;
 
-        settingsList.add(new BooleanSetting("[MOD] MonetLoader & AML (LUA & CLEO Загрузчик)", MONETLOADER_WORK, true, sharedPreferences));
+        settingsList.add(new BooleanSetting("MonetLoader & AML (LUA & CLEO Загрузчик)", MONETLOADER_WORK, true, sharedPreferences));
 
         if (!cpu.equals("arm64-v8a")) {
-            settingsList.add(new BooleanSetting("[MOD] Новая клавиатура", IS_NEW_KEYBOARD, true, sharedPreferences));
-            settingsList.add(new BooleanSetting("[MOD] Новый интерфейс", IS_NEW_INTERFACE, true, sharedPreferences));
+            settingsList.add(new BooleanSetting("Новая клавиатура", IS_NEW_KEYBOARD, true, sharedPreferences));
+            settingsList.add(new BooleanSetting("Новый интерфейс", IS_NEW_INTERFACE, true, sharedPreferences));
         }
     
-        settingsList.add(new BooleanSetting("[MOD] Очистка неиспольуемых файлов", IS_CLEAR_MODE, false, sharedPreferences));
-        settingsList.add(new BooleanSetting("[MOD] Режим копирования сборки", IS_MODS_MODE, false, sharedPreferences));
-        settingsList.add(new BooleanSetting("[MOD] Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences));
-        settingsList.add(new BooleanSetting("[MOD] Проверка обновлений кеша игры", IS_MODE_MODS, true, sharedPreferences));
-        settingsList.add(new BooleanSetting("[MOD] Свободная кнопка запуска", IS_FREE_LAUNCH, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Очистка неиспольуемых файлов", IS_CLEAR_MODE, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Режим копирования сборки", IS_MODS_MODE, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Проверка обновлений кеша игры", IS_MODE_MODS, true, sharedPreferences));
+        settingsList.add(new BooleanSetting("Свободная кнопка запуска", IS_FREE_LAUNCH, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Скрытие строки версии", IS_VERSION_HIDED, false, sharedPreferences));
 
         if (!cpu.equals("arm64-v8a")) {
-            settingsList.add(new SelectableValueSetting("[MOD] Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences));
+            settingsList.add(new SelectableValueSetting("Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences));
             
             Map<Integer, String> versions = GameVersions.getVersions();
-            settingsList.add(new SelectableValueSetting("[MOD] Версия игры", GAME_VERSION, 0, versions, R.drawable.user_icon_vec, sharedPreferences));
+            settingsList.add(new SelectableValueSetting("Версия игры", GAME_VERSION, 0, versions, R.drawable.user_icon_vec, sharedPreferences));
         }
         return settingsList;
     }
