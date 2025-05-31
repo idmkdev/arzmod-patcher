@@ -417,9 +417,10 @@ public class UpdateServicePatch {
                                                     "data/" + packageName + "/files/logcat",
                                                     "data/" + packageName + "/files/AZVoice",
                                                     "data/" + packageName + "/files/SAMP/settings.json",
+                                                    "data/" + packageName + "/files/Adjustable.cfg",
                                                     "data/" + packageName + "/files/UserLimits.ini",
                                                     "data/" + packageName + "/files/gtasatelem.set",
-                                                    "data/" + packageName + "/files/app-arizona-release_web.apk",
+                                                    "data/" + packageName + "/files/app-debug.apk",
                                                     "data/" + packageName + "/files/CLEO/cleo.log"); 
         for (String excludedDir : excludedFiles) {
             if (relativePath.contains(excludedDir)) {

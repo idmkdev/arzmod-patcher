@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include "main.h"
+#include "offsets.h"
 
 
 unsigned char sampEncrTable[256] = {
@@ -86,11 +87,9 @@ signed int SocketLayer__SendTo_Hook([[maybe_unused]] int socket, int sockfd, int
 extern "C" {
     JNIEXPORT void JNICALL
     Java_com_arzmod_radare_InitGamePatch_installPacketsFix(JNIEnv* env, jobject thiz) {
-        void* func_addr = FindPattern("\x48\x1C\x04\xBF", libHandle, GetLibrarySize(libName));   
-        if(func_addr)
-        {
-            SetUpHook(reinterpret_cast<uintptr_t>(func_addr), reinterpret_cast<uintptr_t>(SocketLayer__SendTo_Hook), reinterpret_cast<uintptr_t*>(&SocketLayer__SendTo));
-            LOGI("Hooks installed successfully (SocketLayer__SendTo_Hook), address: %x", libHandle-(uintptr_t)func_addr);
+        int result = PatternHook(SOCKET_LAYER_SENDTO_PATTERN, libHandle, GetLibrarySize(libName), reinterpret_cast<uintptr_t>(SocketLayer__SendTo_Hook), reinterpret_cast<uintptr_t*>(&SocketLayer__SendTo));
+        if(result) {
+            LOGI("Hooks installed successfully (SocketLayer__SendTo_Hook), address: %x (static %x)", result, libHandle-result);
         } else {
             LOGE("Can't find offset from pattern (SocketLayer__SendTo_Hook)");
             pid_t pid = getpid();

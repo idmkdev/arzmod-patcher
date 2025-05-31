@@ -18,7 +18,7 @@ template <size_t N>
 int PatternHook(const char(&pattern)[N], uintptr_t start, size_t length, uintptr_t func, uintptr_t *orig)
 {
     void* func_addr = FindPattern(pattern, start, length);
-    if(func_addr) SetUpHook(reinterpret_cast<uintptr_t>(func_addr), reinterpret_cast<uintptr_t>(func), reinterpret_cast<uintptr_t*>(&orig));
+    if(func_addr) SetUpHook(reinterpret_cast<uintptr_t>(func_addr), func, orig);
     else return 0;
     return (uintptr_t)func_addr;
 }

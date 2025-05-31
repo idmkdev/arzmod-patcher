@@ -38,6 +38,7 @@ public class InitGamePatch {
     public native static void setVersionString(String string);
     public native static void setVersion(String version);
     public native static void versionFix(Context context);
+    public native static void setChatPosition(float pos_x, float pos_y);
 
     private static boolean isAssetExists(Context context, String fileName) {
         try {
@@ -242,8 +243,12 @@ public class InitGamePatch {
                             loadLib("arzmod");
                             isarzmodloaded=true;
                         }
-                        InitGamePatch.setVersion(String.valueOf(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)));
-                        InitGamePatch.versionFix(context);
+                        try {
+                            InitGamePatch.setVersion(String.valueOf(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)));
+                            InitGamePatch.versionFix(context);
+                        } catch (LinkageError e) {
+                            Log.w("arzmod-initgame-module", "Unable to call native method versionFix. Using profile system...", e);
+                        } 
                     }
                     loadLib("monetloader");
                     loadLib("AML");
