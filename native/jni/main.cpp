@@ -40,7 +40,7 @@ void init() {
         InitHookStuff(libName);
     }
 
-    LOGI("ARZMOD Native Init | Build time: %s", __DATE__ " " __TIME__);
+    LOGI("ARZMOD Native Init (samp_base: %x) | Build time: %s", libHandle, __DATE__ " " __TIME__);
 }
 
 
