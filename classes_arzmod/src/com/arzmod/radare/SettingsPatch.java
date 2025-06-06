@@ -502,21 +502,22 @@ public class SettingsPatch {
             return false;
         }
 
-            if (settingsList == null) {
-                SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-                settingsList = getSettingsList(sharedPreferences);
-            }
+        if (settingsList == null) {
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+            settingsList = getSettingsList(sharedPreferences);
+        }
 
-            if (settingsList != null) {
+        if (settingsList != null) {
             for (AbstractSetting setting : settingsList) {
                 if (setting.getSettingKey().equals(key)) {
                     if (setting instanceof BooleanSetting) {
                         return (Boolean) setting.getCurrentValue();
                     }
-                        break;
+                    break;
                 }
             }
+            
         }
-        return false;
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(key, false);
     }
 }
