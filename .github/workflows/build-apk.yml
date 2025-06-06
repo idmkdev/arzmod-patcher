@@ -4,14 +4,67 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Создать новый релиз'
+        required: true
+        type: boolean
+        default: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Latest Version
+        id: get_version
+        run: |
+          VERSION_INFO=$(curl -s http://mob.maz-ins.com/game/release/app_version.json)
+          LAUNCHER_VERSION=$(echo $VERSION_INFO | jq -r '.launcherVersion')
+          LAUNCHER_VERSION_NAME=$(echo $VERSION_INFO | jq -r '.launcherVersionName')
+          echo "launcher_version=$LAUNCHER_VERSION" >> $GITHUB_OUTPUT
+          echo "launcher_version_name=$LAUNCHER_VERSION_NAME" >> $GITHUB_OUTPUT
+
+      - name: Get Commit History
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release
+        id: get_commits
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")
+          COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)")
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Git Tag
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release
+        id: create_tag
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          TAG_MESSAGE="${{ steps.get_version.outputs.launcher_version_name }}
+          Версия лаунчера: ${{ steps.get_version.outputs.launcher_version_name }}
+          Номер сборки: ${{ steps.get_version.outputs.launcher_version }}
+          
+          Изменения с последнего релиза:
+          ${{ steps.get_commits.outputs.commits }}"
+          
+          git tag -a "${{ steps.get_version.outputs.launcher_version }}" -m "$TAG_MESSAGE"
+          git push origin "${{ steps.get_version.outputs.launcher_version }}"
+          
+          # Сохраняем имя тега для возможного удаления при ошибке
+          echo "tag_name=${{ steps.get_version.outputs.launcher_version }}" >> $GITHUB_OUTPUT
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -86,10 +139,17 @@ jobs:
           path: ./dist/app-rodina-x64-patched.apk
 
       - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ steps.get_version.outputs.launcher_version }}
+          name: ${{ steps.get_version.outputs.launcher_version_name }} (${{ steps.get_version.outputs.launcher_version }})
+          body: |
+            Версия лаунчера: ${{ steps.get_version.outputs.launcher_version_name }}
+            Номер сборки: ${{ steps.get_version.outputs.launcher_version }}
+
+            Изменения с последнего релиза:
+            ${{ steps.get_commits.outputs.commits }}
           files: |
             ./dist/app-arizona-x32-patched.apk
             ./dist/app-arizona-x64-patched.apk
@@ -97,3 +157,8 @@ jobs:
             ./dist/app-rodina-x64-patched.apk
           draft: false
           prerelease: false
+
+      - name: Cleanup on Failure
+        if: failure() && github.event_name == 'workflow_dispatch' && inputs.create_release
+        run: |
+          git push origin --delete "${{ steps.create_tag.outputs.tag_name }}" || true

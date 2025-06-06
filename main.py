@@ -726,8 +726,8 @@ def build_native_lib(folder_name, arch):
 
     if os.path.exists(jni_path):
         try:
-            run_command("ndk-build", cwd=folder_path)
-        except Exception as e:
+            subprocess.run("ndk-build", cwd=folder_path, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
             print(f"Ошибка при сборке через ndk-build: {str(e)}")
             print("Возьмем готовую библиотеку из папки libs/{arch} (если вы хотите собрать библиотеку самостоятельно, попробуйте прочитать native/README.md)")
 
