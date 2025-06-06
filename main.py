@@ -66,6 +66,52 @@ def update_app_version(new_version_code, new_version_name):
 		print(f"Error updating {app_dir}/apktool.yml: {e}")
 
 
+def get_app_settings(package_name: str) -> dict[str, str] | None:
+    try:
+        result = subprocess.run(
+            ["adb", "shell", "dumpsys", "package", package_name],
+            capture_output=True, text=True, check=True
+        )
+
+        if f"Package [{package_name}]" not in result.stdout:
+            print(f"Пакет {package_name} не найден.")
+            return None
+
+        settings = {}
+        for line in result.stdout.splitlines():
+            matches = re.findall(r'(\w+)=([^\s]+)', line)
+            for key, value in matches:
+                settings[key] = value
+
+        return settings
+    except subprocess.CalledProcessError:
+        print("Ошибка при выполнении adb.")
+    except FileNotFoundError:
+        print("adb не найден в PATH.")
+
+    return None
+
+def is_app_installed(package_name: str):
+    try:
+        result = subprocess.run(
+            ["adb", "shell", "dumpsys", "package", package_name],
+            capture_output=True, text=True, check=True
+        )
+
+        if "Package [" + package_name + "]" not in result.stdout:
+            return False
+
+        return True
+
+    except subprocess.CalledProcessError as e:
+        print("Ошибка при выполнении adb:", e)
+        return False
+    except FileNotFoundError:
+        print("adb не найден в PATH")
+        return False
+
+    return False
+
 def replace_files(base_path, name):
 	res_folder = f"{app_dir}/res"
 	if not os.path.exists(res_folder):
@@ -106,6 +152,29 @@ def add_patched_lib(libname, arch):
 		exitWithError("Библиотеки для копирования не найдено")
 	return libpath
 
+def get_define_value(file_path: str, define_name: str) -> int | str | None:
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("#define"):
+                    match = re.match(rf"#define\s+{re.escape(define_name)}\s+(.+)", line)
+                    if match:
+                        value = match.group(1).strip()
+                        if value.startswith('"') and value.endswith('"'):
+                            return value[1:-1]
+                        if value.isdigit():
+                            return int(value)
+                        if re.fullmatch(r'0x[0-9a-fA-F]+', value):
+                            return int(value, 16)
+                        return value
+    except FileNotFoundError:
+        exitWithError(f"Файл не найден: {file_path}")
+    except Exception as e:
+        exitWithError(f"Ошибка при чтении файла: {e}")
+
+    return None
+
 def find_pattern(data: bytes, pattern: str) -> bool:
 	pattern_bytes = []
 	mask = []
@@ -137,17 +206,47 @@ def find_pattern(data: bytes, pattern: str) -> bool:
 
 	return False
 
-def add_game_version(version, bypasscheck=False):
+
+# bypass checks: 0 = no bypass, 1 = bypass checking, 2 = try to check in native module
+def add_game_version(version, bypasscheck=0):
 	try:
 		if isinstance(version, str):
 			version = ""
 
+		nativemodulepath = f"{working_dir}/native/jni/monetloader.h"
 		profilepath = f"{working_dir}/resource/profile{str(version)}.json"
 		libpath = add_patched_lib(f"libsamp{str(version)}.so", "armeabi-v7a")
 
-		if bypasscheck:
+		if bypasscheck == 1:
 			add_asset(profilepath)
 			return
+
+
+		if bypasscheck == 2:
+			print(f"Проверяем оффсеты: {nativemodulepath}")
+			if not os.path.exists(nativemodulepath):
+				print("Нативная реализация не найдена. Пропускаем проверку профиля...")
+				add_asset(profilepath)
+				return
+			try:
+				receiveignorerpc_pattern = get_define_value(nativemodulepath, f"ReceiveIgnoreRPCPattern{version}")
+				cnetgame_ctor_pattern = get_define_value(nativemodulepath, f"CNetGame_ctorPattern{version}")
+				with open(libpath, 'rb') as lib_file:
+					lib_data = lib_file.read()
+					
+					print(f"Проверяем паттерн ReceiveIgnoreRPC - {receiveignorerpc_pattern}")
+					if not find_pattern(lib_data, receiveignorerpc_pattern):
+						exitWithError(f"Паттерн ReceiveIgnoreRPC - {receiveignorerpc_pattern} не найден в {libpath}")
+					print(f"Проверяем паттерн CNetGame_ctor - {cnetgame_ctor_pattern}")
+					if not find_pattern(lib_data, cnetgame_ctor_pattern):
+						exitWithError(f"Паттерн CNetGame_ctor - {cnetgame_ctor_pattern} не найден в {libpath}")
+
+				print("Библиотека проверена и доступна для использования. Обновление оффсетов не требуется")
+				add_asset(profilepath)
+			except Exception as e:
+				exitWithError(f"Ошибка при проверке библиотеки: {e}")
+			return
+
 		with open(profilepath, 'r', encoding='utf-8') as json_file:
 			data = json.load(json_file)
 		
@@ -1191,6 +1290,20 @@ def arzmod_patch():
 		replace_files(working_dir + "/resource/ic_chat_button", "ic_btn_shop")
 		replace_files(working_dir + "/resource/remote_config_defaults", "remote_config_defaults")
 
+	# CHECK OFFSETS IN NATIVE MODULE
+	libsamppath = f"{app_dir}/lib/armeabi-v7a/libsamp.so"
+	nativeoffsetspath = f"{working_dir}/native/jni/offsets.h"
+	with open(libsamppath, 'rb') as lib_file:
+		lib_data = lib_file.read()
+
+		patterns = ["INSTALL_VERSION_STRING_PATTERN", "CHAT_RENDER_PATTERN", "SOCKET_LAYER_SENDTO_PATTERN"]
+
+		for pattern in patterns:
+			pattern_value = get_define_value(nativeoffsetspath, pattern).replace("\\x", "")
+			print(f"Проверяем паттерн {pattern} - {pattern_value}")
+			if not find_pattern(lib_data, pattern_value):
+				exitWithError(f"Паттерн {pattern} - {pattern_value} не найден в {libsamppath}")
+
 	# ADD GAME LIBS
 	if usearm64:
 		add_asset(f"{working_dir}/resource/profile.json")
@@ -1204,7 +1317,7 @@ def arzmod_patch():
 		build_native_lib("native", "armeabi-v7a")
 	
 		# ADD GAME VERSION
-		add_game_version("actual", True)
+		add_game_version("actual", 2)
 		if project == ARIZONA_MOBILE:
 			add_game_version(1601)
 			add_game_version(1579)
@@ -1214,15 +1327,24 @@ def arzmod_patch():
 	global launcher_ver, launcher_vername, launcher_verlua
 	launcher_ver, launcher_vername = get_app_version()
 
-	if arzmodbuild:
-		currentversion = get_version(f"https://radarebot.hhos.net/{'arz_modclient' if project == ARIZONA_MOBILE else 'rod_modclient'}/update.json")
-		if arzmod_dev:
-			launcher_verlua = launcher_ver if currentversion + 1 < launcher_ver else currentversion + 1 
+	if "-lockversion" in sys.argv:
+		settings = get_app_settings(package_name)
+		if settings:
+			print(f"Текущая версия приложения {settings.get('versionCode')} ({settings.get('versionName')}). Последнее обновление {settings.get('lastUpdateTime')}")
+			update_app_version(int(settings.get("versionCode")), settings.get("versionName"))
+			launcher_verlua = int(settings.get("versionCode"))
 		else:
-			launcher_verlua = currentversion
-	elif not arzmodbuild:
-		launcher_verlua = 0x7FFF
-		update_app_version(1, f"{launcher_vername}_without_updates")
+			exitWithError("Произошла ошибка при получении текущей версии, возможно приложение не установлено.")
+	else:
+		if arzmodbuild:
+			currentversion = get_version(f"https://radarebot.hhos.net/{'arz_modclient' if project == ARIZONA_MOBILE else 'rod_modclient'}/update.json")
+			if arzmod_dev:
+				launcher_verlua = launcher_ver if currentversion + 1 < launcher_ver else currentversion + 1 
+			else:
+				launcher_verlua = currentversion
+		elif not arzmodbuild:
+			launcher_verlua = 0x7FFF
+			update_app_version(1, f"{launcher_vername}_without_updates")
 
 	print(f"Set update version from {launcher_ver} to {launcher_verlua}")
 	search_and_replace(src_path + "/com/arizona/launcher/UpdateService.smali", str(hex(int(launcher_ver))), str(hex(int(launcher_verlua))))
@@ -1245,8 +1367,8 @@ def exitWithError(msg):
 	print(msg)
 	print(f"Build settings: Project = {'ARIZONA' if project == ARIZONA_MOBILE else 'RODINA'} | ARZMOD = {arzmodbuild} | UseARM64 = {usearm64}")
 	print("Press Enter for exit.")
-	input()
-	exit(1)
+	if input() != "continue": 
+		exit(1)
 
 
 if __name__ == "__main__":
@@ -1270,7 +1392,7 @@ if __name__ == "__main__":
 	print("Название файла:", name)
 	print("Папка проекта:", app_dir)
 
-	if (arzmod_release.build_download if arzmod_dev else config.build_download):
+	if (arzmod_release.build_download if arzmod_dev else config.build_download) or "-lockversion" in sys.argv:
 		try:
 			devices = subprocess.run(['adb', 'devices'], capture_output=True, text=True).stdout.split('\n')[1:]
 			devices = [d.split('\t')[0] for d in devices if d.strip() and 'List of devices' not in d]
@@ -1291,10 +1413,11 @@ if __name__ == "__main__":
 			else:
 				print(f"Подключено устройство: {devices[0]}")
 		except Exception as e:
-			print(f"Ошибка при работе с ADB: {e}")
+			exitWithError(f"Ошибка при работе с ADB: {e}")
 		
 
 	testmode = False
+
 	if "-testjava" in sys.argv:
 		if not os.path.exists(app_dir):
 				exitWithError("The project path doesn't exists, you can't running tests")
