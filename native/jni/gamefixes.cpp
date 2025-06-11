@@ -33,33 +33,35 @@ struct ChatRendererData {
 static VersionStringData version_data;
 static ChatRendererData chat_data;
 
-signed int (*InstallVersionString)(char* dest,int unk_1,int verlen,char* version, char* commit,int modifylen) = nullptr;
-signed int InstallVersionStringHook(char* dest,int unk_1,int verlen,char* version, char* commit,int modifylen)
+void (*InstallVersionString)(int param_1,int param_2,int param_3) = nullptr;
+void InstallVersionStringHook(int param_1,int param_2,int param_3)
 {
-    version_data.saved_dest = dest;
-    if(version) {
-        if(version_data.saved_version) free(version_data.saved_version);
-        version_data.saved_version = strdup(version);
-    }
-    if(commit) {
-        if(version_data.saved_commit) free(version_data.saved_commit);
-        version_data.saved_commit = strdup(commit);
-    }
+    version_data.saved_dest = (char*)(param_1 + 0x53);
+    InstallVersionString(param_1, param_2, param_3);
     
+    char version[32] = {0};
+    char commit[32] = {0};
+    
+    sscanf(version_data.saved_dest, "Ver: %[^,], Native: %[^-]", version, commit);
+    
+    if (version_data.saved_version) free(version_data.saved_version);
+    version_data.saved_version = strdup(version);
+    
+    if (version_data.saved_commit) free(version_data.saved_commit);
+    version_data.saved_commit = strdup(commit);
+
     if(version_data.saved_string) {
         std::string str(version_data.saved_string);
         if(str.find("{version}") != std::string::npos) {
-            str.replace(str.find("{version}"), 9, version);
+            str.replace(str.find("{version}"), 9, version_data.saved_version);
         }
         if(str.find("{commit}") != std::string::npos) {
-            str.replace(str.find("{commit}"), 8, commit);
+            str.replace(str.find("{commit}"), 8, version_data.saved_commit);
         }
-        strcpy(dest, str.c_str());
+        strcpy(version_data.saved_dest, str.c_str());
     } else {
-        *dest = '\0';
+        *version_data.saved_dest = '\0';
     }
-    // InstallVersionString(dest, unk_1, verlen, version, commit, modifylen);
-    return 1;
 }
 
 void (*ChatRenderer)(int param_1, int param_2) = nullptr;
@@ -92,10 +94,10 @@ extern "C" {
             
             if(version_data.saved_dest) {
                 std::string mod_str(version_data.saved_string);
-                if(mod_str.find("{version}") != std::string::npos) {
+                if(version_data.saved_version && mod_str.find("{version}") != std::string::npos) {
                     mod_str.replace(mod_str.find("{version}"), 9, version_data.saved_version);
                 }
-                if(mod_str.find("{commit}") != std::string::npos) {
+                if(version_data.saved_commit && mod_str.find("{commit}") != std::string::npos) {
                     mod_str.replace(mod_str.find("{commit}"), 8, version_data.saved_commit);
                 }
                 strcpy(version_data.saved_dest, mod_str.c_str());
@@ -105,12 +107,10 @@ extern "C" {
 
         if(!version_data.is_patched)
         {
-            int result = PatternHook(INSTALL_VERSION_STRING_PATTERN, libHandle, GetLibrarySize(libName), reinterpret_cast<uintptr_t>(InstallVersionStringHook), reinterpret_cast<uintptr_t*>(&InstallVersionString));
+            int result = PatternHook(INSTALL_VERSION_STRING_PATTERN, libHandle, GetLibrarySize(libName), reinterpret_cast<uintptr_t>(InstallVersionStringHook), reinterpret_cast<uintptr_t*>(&InstallVersionString), "InstallVersionStringHook");
             if(result) {
-                LOGI("Hooks installed successfully (InstallVersionStringHook), address: %x (static %x)", result, libHandle-result);
                 version_data.is_patched = true;
             } else {
-                LOGE("Can't find offset from pattern (InstallVersionStringHook)");
                 version_data.is_patched = true;
             }
         }
@@ -123,12 +123,10 @@ extern "C" {
         chat_data.is_set = true;
 
         if(!chat_data.is_patched) {
-            int result = PatternHook(CHAT_RENDER_PATTERN, libHandle, GetLibrarySize(libName), reinterpret_cast<uintptr_t>(ChatRendererHook), reinterpret_cast<uintptr_t*>(&ChatRenderer));
+            int result = PatternHook(CHAT_RENDER_PATTERN, libHandle, GetLibrarySize(libName), reinterpret_cast<uintptr_t>(ChatRendererHook), reinterpret_cast<uintptr_t*>(&ChatRenderer), "ChatRendererHook");
             if(result) {
-                LOGI("Hooks installed successfully (ChatRender), address: %x (static %x)", result, libHandle-result);
                 chat_data.is_patched = true;
             } else {
-                LOGE("Can't find offset from pattern (ChatRender)");
                 chat_data.is_patched = true;
             }
         }
@@ -138,5 +136,11 @@ extern "C" {
 
 __attribute__((constructor))
 void init_gamefixes() {
-    LOGI("GameFixes module inited | Build time: %s", __DATE__ " " __TIME__);
+    #ifdef __arm__
+        LOGI("GameFixes module inited | x32 | Build time: %s", __DATE__ " " __TIME__);
+    #elif defined __aarch64__
+        LOGI("GameFixes module inited | x64 | Build time: %s", __DATE__ " " __TIME__);
+    #else
+        #error "Unsupported architecture"
+    #endif
 } 

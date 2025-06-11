@@ -26,9 +26,16 @@ uintptr_t memlib_end	= 0;
 
 void UnFuck(uintptr_t ptr)
 {
-	mprotect((void*)(ptr & 0xFFFFF000), PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
+    #ifdef __aarch64__
+        size_t pageSize = sysconf(_SC_PAGESIZE);
+        mprotect((void*)(ptr & ~(pageSize - 1)), pageSize, PROT_READ | PROT_WRITE | PROT_EXEC);
+    #elif __arm__
+        size_t pageSize = sysconf(_SC_PAGESIZE);
+        mprotect((void*)(ptr & ~(pageSize - 1)), pageSize, PROT_READ | PROT_WRITE | PROT_EXEC);
+    #else
+        #error "Unsupported architecture"
+    #endif
 }
-
 void NOP(uintptr_t addr, unsigned int count)
 {
     UnFuck(addr);
@@ -39,22 +46,45 @@ void NOP(uintptr_t addr, unsigned int count)
         *(char*)(ptr+1) = 0x46;
     }
 
-    cacheflush(addr, (uintptr_t)(addr + count*2), 0);
+    #ifdef __aarch64__
+        __builtin___clear_cache((char*)addr, (char*)(addr + count*2));
+    #elif __arm__
+        cacheflush(addr, (uintptr_t)(addr + count*2), 0);
+    #else
+        #error "Unsupported architecture"
+    #endif
 }
 
 void WriteMemory(uintptr_t dest, uintptr_t src, size_t size)
 {
-	UnFuck(dest);
-	memcpy((void*)dest, (void*)src, size);
-	cacheflush(dest, dest+size, 0);
+    UnFuck(dest);
+    memcpy((void*)dest, (void*)src, size);
+    #ifdef __aarch64__
+        __builtin___clear_cache((char*)dest, (char*)(dest + size));
+        __builtin___clear_cache((char*)src, (char*)(src + size));
+    #elif __arm__
+        cacheflush(dest, dest + size, 0);
+        cacheflush(src, src + size, 0);
+    #else
+        #error "Unsupported architecture"
+    #endif
 }
 
 void ReadMemory(uintptr_t dest, uintptr_t src, size_t size)
 {
+    UnFuck(dest);
     UnFuck(src);
     memcpy((void*)dest, (void*)src, size);
+    #ifdef __aarch64__
+        __builtin___clear_cache((char*)dest, (char*)(dest + size));
+        __builtin___clear_cache((char*)src, (char*)(src + size));
+    #elif __arm__
+        cacheflush(dest, dest + size, 0);
+        cacheflush(src, src + size, 0);
+    #else
+        #error "Unsupported architecture"
+    #endif
 }
-
 
 void InitHookStuff(const char* lib_name)
 {

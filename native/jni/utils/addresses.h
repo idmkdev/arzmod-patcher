@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 struct LibraryInfo {
     uintptr_t address;
@@ -31,3 +32,5 @@ void* FindPattern(const char(&pattern)[N], uintptr_t start, size_t length) {
 size_t GetLibrarySize(const char* lib_name);
 uintptr_t FindLibrary(const char* library);
 LibraryInfo FindLibraryByPrefix(const char* library_prefix);
+
+std::string GetFunctionPattern(void* func_addr, size_t size);

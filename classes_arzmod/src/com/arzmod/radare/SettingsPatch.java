@@ -56,6 +56,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.app.Activity;
 import com.arzmod.radare.GameVersions;
+import android.view.MotionEvent;
+import android.os.Bundle;
+import java.io.InputStream;
+import android.widget.FrameLayout;
 
 public class SettingsPatch {
     
@@ -260,6 +264,338 @@ public class SettingsPatch {
         }
     }
 
+    public static final String CHAT_POSITION_ENABLED = "chat_position_enabled";
+    public static final String CHAT_POSITION_X = "chat_position_x";
+    public static final String CHAT_POSITION_Y = "chat_position_y";
+
+    public static class ChatPositionSetting extends AbstractSetting {
+        private static final float DEFAULT_X = 384.375f;
+        private static final float DEFAULT_Y = 22.5f;
+        private float currentX = DEFAULT_X;
+        private float currentY = DEFAULT_Y;
+        private AlertDialog editDialog;
+
+        public ChatPositionSetting(String title, String key, SharedPreferences prefs) {
+            super(title, key, prefs);
+            currentX = prefs.getFloat(CHAT_POSITION_X, DEFAULT_X);
+            currentY = prefs.getFloat(CHAT_POSITION_Y, DEFAULT_Y);
+        }
+
+        @Override
+        public Boolean getCurrentValue() {
+            return preferences.getBoolean(settingKey, false);
+        }
+
+        private void showEditDialog(Context context) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            
+            WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            Display display = wm.getDefaultDisplay();
+            Point size = new Point();
+            display.getSize(size);
+            int screenWidth = size.x;
+            int screenHeight = size.y;
+
+            FrameLayout mainLayout = new FrameLayout(context);
+            mainLayout.setLayoutParams(new ViewGroup.LayoutParams(
+                screenWidth,
+                screenHeight
+            ));
+
+            TextView warningText = new TextView(context);
+            SpannableString warningMessage = new SpannableString("Позиции тут и в игре могут различаться. Для точной редакции установите скрипт t.me/cleodis");
+            ClickableSpan clickableSpan = new ClickableSpan() {
+                @Override
+                public void onClick(View widget) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/cleodis"));
+                    context.startActivity(intent);
+                }
+                @Override
+                public void updateDrawState(TextPaint ds) {
+                    ds.setColor(Color.CYAN);
+                    ds.setUnderlineText(true);
+                }
+            };
+            warningMessage.setSpan(clickableSpan, warningMessage.toString().indexOf("t.me/cleodis"), 
+                warningMessage.toString().indexOf("t.me/cleodis") + "t.me/cleodis".length(), 
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            
+            warningText.setText(warningMessage);
+            warningText.setTextColor(Color.WHITE);
+            warningText.setTextSize(14);
+            warningText.setPadding(20, 20, 20, 20);
+            warningText.setBackgroundColor(Color.parseColor("#80000000"));
+            warningText.setMovementMethod(LinkMovementMethod.getInstance());
+            
+            FrameLayout.LayoutParams warningParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            warningParams.gravity = Gravity.TOP | Gravity.START;
+            warningText.setLayoutParams(warningParams);
+
+            ImageView backgroundView = new ImageView(context);
+            FrameLayout.LayoutParams bgParams = new FrameLayout.LayoutParams(
+                screenWidth,
+                screenHeight
+            );
+            backgroundView.setLayoutParams(bgParams);
+            backgroundView.setScaleType(ImageView.ScaleType.FIT_XY);
+            
+            try {
+                InputStream is = context.getAssets().open("arzmod/game.png");
+                Bitmap bitmap = BitmapFactory.decodeStream(is);
+                backgroundView.setImageBitmap(bitmap);
+                is.close();
+            } catch (Exception e) {
+                backgroundView.setBackgroundColor(Color.parseColor("#80000000"));
+            }
+
+            ImageView chatView = new ImageView(context);
+            FrameLayout.LayoutParams chatParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            chatView.setLayoutParams(chatParams);
+            
+            try {
+                InputStream is = context.getAssets().open("arzmod/chat.png");
+                Bitmap bitmap = BitmapFactory.decodeStream(is);
+                chatView.setImageBitmap(bitmap);
+                is.close();
+            } catch (Exception e) {
+                chatView.setBackgroundColor(Color.parseColor("#80000000"));
+            }
+
+            LinearLayout buttonsLayout = new LinearLayout(context);
+            buttonsLayout.setOrientation(LinearLayout.HORIZONTAL);
+            buttonsLayout.setGravity(Gravity.CENTER);
+            buttonsLayout.setPadding(20, 20, 20, 20);
+            buttonsLayout.setBackgroundColor(Color.parseColor("#80000000"));
+
+            FrameLayout.LayoutParams buttonsParams = new FrameLayout.LayoutParams(
+                screenWidth / 3,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            buttonsParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+            buttonsParams.bottomMargin = 50;
+            buttonsLayout.setLayoutParams(buttonsParams);
+
+            android.widget.Button saveButton = new android.widget.Button(context);
+            saveButton.setText("Сохранить");
+            saveButton.setTextColor(Color.WHITE);
+            saveButton.setBackgroundColor(Color.parseColor("#4CAF50"));
+            saveButton.setTextSize(12);
+
+            android.widget.Button resetButton = new android.widget.Button(context);
+            resetButton.setText("Сбросить");
+            resetButton.setTextColor(Color.WHITE);
+            resetButton.setBackgroundColor(Color.parseColor("#FFC107"));
+            resetButton.setTextSize(12);
+
+            android.widget.Button cancelButton = new android.widget.Button(context);
+            cancelButton.setText("Отменить");
+            cancelButton.setTextColor(Color.WHITE);
+            cancelButton.setBackgroundColor(Color.parseColor("#F44336"));
+            cancelButton.setTextSize(12);
+
+            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1.0f
+            );
+            buttonParams.setMargins(5, 0, 5, 0);
+
+            saveButton.setLayoutParams(buttonParams);
+            resetButton.setLayoutParams(buttonParams);
+            cancelButton.setLayoutParams(buttonParams);
+
+            buttonsLayout.addView(saveButton);
+            buttonsLayout.addView(resetButton);
+            buttonsLayout.addView(cancelButton);
+
+            mainLayout.addView(backgroundView);
+            mainLayout.addView(chatView);
+            mainLayout.addView(buttonsLayout);
+            mainLayout.addView(warningText);
+
+            chatView.setX(currentX);
+            chatView.setY(currentY);
+
+            chatView.setOnTouchListener(new View.OnTouchListener() {
+                private float lastX = 0;
+                private float lastY = 0;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            lastX = event.getRawX();
+                            lastY = event.getRawY();
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            float deltaX = event.getRawX() - lastX;
+                            float deltaY = event.getRawY() - lastY;
+                            
+                            lastX = event.getRawX();
+                            lastY = event.getRawY();
+                            
+                            float newX = Math.max(-500, Math.min(screenWidth + 500, v.getX() + deltaX));
+                            float newY = Math.max(-300, Math.min(screenHeight + 300, v.getY() + deltaY));
+                            
+                            v.setX(newX);
+                            v.setY(newY);
+                            
+                            currentX = newX;
+                            currentY = newY;
+                            return true;
+                        case MotionEvent.ACTION_UP:
+                            return true;
+                    }
+                    return false;
+                }
+            });
+
+            saveButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    preferences.edit()
+                        .putFloat(CHAT_POSITION_X, currentX)
+                        .putFloat(CHAT_POSITION_Y, currentY)
+                        .apply();
+                    Toast.makeText(context, "Позиция сохранена", Toast.LENGTH_SHORT).show();
+                    if (editDialog != null) {
+                        editDialog.dismiss();
+                    }
+                }
+            });
+
+            resetButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    currentX = DEFAULT_X;
+                    currentY = DEFAULT_Y;
+                    chatView.setX(currentX);
+                    chatView.setY(currentY);
+                    preferences.edit()
+                        .putFloat(CHAT_POSITION_X, DEFAULT_X)
+                        .putFloat(CHAT_POSITION_Y, DEFAULT_Y)
+                        .apply();
+                    Toast.makeText(context, "Позиция сброшена", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            cancelButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (editDialog != null) {
+                        editDialog.dismiss();
+                    }
+                }
+            });
+
+            builder.setView(mainLayout);
+            editDialog = builder.create();
+            
+            if (editDialog.getWindow() != null) {
+                editDialog.getWindow().setLayout(
+                    screenWidth,
+                    screenHeight
+                );
+                editDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                editDialog.getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                );
+            }
+            
+            editDialog.show();
+        }
+
+        @Override
+        public View createView(Context context) {
+            LinearLayout layout = new LinearLayout(context);
+            layout.setOrientation(LinearLayout.HORIZONTAL);
+            layout.setPadding(20, 10, 20, 10);
+
+            TextView titleView = new TextView(context);
+            titleView.setText(title);
+            titleView.setTextSize(16);
+            titleView.setTextColor(Color.WHITE);
+
+            Switch switchView = new Switch(context);
+            switchView.setChecked(getCurrentValue());
+            
+            LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            titleParams.weight = 1;
+            titleView.setLayoutParams(titleParams);
+
+            layout.addView(titleView);
+            layout.addView(switchView);
+
+            switchView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    boolean canChange = true;
+                    if (callback != null) {
+                        canChange = callback.onSettingChange(settingKey, isChecked, !isChecked);
+                    }
+                    if (canChange) {
+                        preferences.edit().putBoolean(settingKey, isChecked).apply();
+                        if (isChecked) {
+                            showEditDialog(context);
+                        } else {
+                            currentX = DEFAULT_X;
+                            currentY = DEFAULT_Y;
+                            preferences.edit()
+                                .putFloat(CHAT_POSITION_X, DEFAULT_X)
+                                .putFloat(CHAT_POSITION_Y, DEFAULT_Y)
+                                .apply();
+                        }
+                    } else {
+                        buttonView.setChecked(!isChecked);
+                    }
+                }
+            });
+
+            return layout;
+        }
+    }
+
+    public static class ChatPosition {
+        public final boolean enabled;
+        public final float x;
+        public final float y;
+
+        public ChatPosition(boolean enabled, float x, float y) {
+            this.enabled = enabled;
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    public static ChatPosition getChatPosition() {
+        context = AppContext.getContext();
+        if (context == null) {
+            Log.e("arzmod-settings-module", "Context is null (getChatPosition)");
+            return new ChatPosition(false, 384.375f, 22.5f);
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean isEnabled = prefs.getBoolean(CHAT_POSITION_ENABLED, false);
+        
+        if (!isEnabled) {
+            return new ChatPosition(false, 384.375f, 22.5f);
+        }
+
+        float x = prefs.getFloat(CHAT_POSITION_X, 384.375f);
+        float y = prefs.getFloat(CHAT_POSITION_Y, 22.5f);
+        return new ChatPosition(true, x, y);
+    }
+
     private static Context context;
     private static List<AbstractSetting> settingsList;
 
@@ -301,9 +637,10 @@ public class SettingsPatch {
         settingsList.add(new BooleanSetting("Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences));
         settingsList.add(new BooleanSetting("Проверка обновлений кеша игры", IS_MODE_MODS, true, sharedPreferences));
         settingsList.add(new BooleanSetting("Свободная кнопка запуска", IS_FREE_LAUNCH, false, sharedPreferences));
-        settingsList.add(new BooleanSetting("Скрытие строки версии", IS_VERSION_HIDED, false, sharedPreferences));
 
         if (!cpu.equals("arm64-v8a")) {
+            settingsList.add(new ChatPositionSetting("Позиция чата", CHAT_POSITION_ENABLED, sharedPreferences));
+            settingsList.add(new BooleanSetting("Скрытие строки версии", IS_VERSION_HIDED, false, sharedPreferences));
             settingsList.add(new SelectableValueSetting("Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences));
             
             Map<Integer, String> versions = GameVersions.getVersions();
@@ -420,6 +757,24 @@ public class SettingsPatch {
                         } else {
                             UpdateServicePatch.setHomeUi(false);
                         }
+                    } else if (key.equals(IS_VERSION_21)) {
+                        boolean isEnabled = (Boolean) newValue;
+                        if (isEnabled) {
+                            new AlertDialog.Builder(context)
+                                .setTitle("Эмуляция лаунчера 2.1")
+                                .setMessage("Глобально ничего не меняет, включает новый инвентарь и запрещает ставить стандартный худ")
+                                .setPositiveButton("OK", null)
+                                .show();
+                        } 
+                    } else if (key.equals(IS_VERSION_HIDED)) {
+                        boolean isEnabled = (Boolean) newValue;
+                        if (isEnabled) {
+                            new AlertDialog.Builder(context)
+                                .setTitle("Скрытие строки версии")
+                                .setMessage("Скрывает строку версии в игре. Доступен также публичный метод, который позволяет вписать свою строку (найдите скрипт в t.me/cleodis)")
+                                .setPositiveButton("OK", null)
+                                .show();
+                        } 
                     } else if (key.equals(GAME_VERSION)) {
                         Integer choosenVersion = (Integer) newValue;
                         switch(choosenVersion) {

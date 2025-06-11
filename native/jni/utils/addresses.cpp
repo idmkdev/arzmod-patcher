@@ -15,7 +15,23 @@
 #include "addresses.h"
 #include "logging.h"
 
-
+std::string GetFunctionPattern(void* func_addr, size_t size) {
+    if (!func_addr || size == 0) {
+        return "";
+    }
+    
+    unsigned char* bytes = (unsigned char*)func_addr;
+    std::string pattern;
+    pattern.reserve(size * 2);
+    
+    for(size_t i = 0; i < size; i++) {
+        char hex[3];
+        snprintf(hex, sizeof(hex), "%02X", bytes[i]);
+        pattern += hex;
+    }
+    
+    return pattern;
+}
 
 uintptr_t FindLibrary(const char* library)
 {
@@ -55,7 +71,12 @@ size_t GetLibrarySize(const char* lib_name) {
     char buffer[2048] = {0};
     FILE *fp = nullptr;
     size_t lib_size = 0;
-    uintptr_t min_addr = 0xFFFFFFFF;
+    
+    #if defined(__aarch64__)
+        uintptr_t min_addr = 0xFFFFFFFFFFFFFFFF;
+    #else
+        uintptr_t min_addr = 0xFFFFFFFF;
+    #endif
     uintptr_t max_addr = 0;
 
     sprintf(filename, "/proc/%d/maps", getpid());
@@ -69,7 +90,11 @@ size_t GetLibrarySize(const char* lib_name) {
     while (fgets(buffer, sizeof(buffer), fp)) {
         if (strstr(buffer, lib_name)) {
             uintptr_t start_addr, end_addr;
-            if (sscanf(buffer, "%x-%x", &start_addr, &end_addr) == 2) {
+            #if defined(__aarch64__)
+                if (sscanf(buffer, "%lx-%lx", &start_addr, &end_addr) == 2) {
+            #else
+                if (sscanf(buffer, "%x-%x", (unsigned int*)&start_addr, (unsigned int*)&end_addr) == 2) {
+            #endif
                 if (start_addr < min_addr) min_addr = start_addr;
                 if (end_addr > max_addr) max_addr = end_addr;
             } else {
@@ -80,7 +105,11 @@ size_t GetLibrarySize(const char* lib_name) {
 
     fclose(fp);
 
-    if (min_addr != 0xFFFFFFFF && max_addr != 0) {
+    #if defined(__aarch64__)
+        if (min_addr != 0xFFFFFFFFFFFFFFFF && max_addr != 0) {
+    #else
+        if (min_addr != 0xFFFFFFFF && max_addr != 0) {
+    #endif
         lib_size = max_addr - min_addr;
     } else {
         LOGE("ERROR: library size not found for %s", lib_name);

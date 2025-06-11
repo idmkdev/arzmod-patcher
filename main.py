@@ -229,8 +229,8 @@ def add_game_version(version, bypasscheck=0):
 				add_asset(profilepath)
 				return
 			try:
-				receiveignorerpc_pattern = get_define_value(nativemodulepath, f"ReceiveIgnoreRPCPattern{version}")
-				cnetgame_ctor_pattern = get_define_value(nativemodulepath, f"CNetGame_ctorPattern{version}")
+				receiveignorerpc_pattern = get_define_value(nativemodulepath, f"ReceiveIgnoreRPCPattern{version}").replace("\\x", "")
+				cnetgame_ctor_pattern = get_define_value(nativemodulepath, f"CNetGame_ctorPattern{version}").replace("\\x", "")
 				with open(libpath, 'rb') as lib_file:
 					lib_data = lib_file.read()
 					
@@ -726,7 +726,7 @@ def build_native_lib(folder_name, arch):
 
     if os.path.exists(jni_path):
         try:
-            subprocess.run("ndk-build", cwd=folder_path, check=True, shell=True)
+            subprocess.run("ndk-build APP_ABI=" + arch, cwd=folder_path, check=True, shell=True)
         except subprocess.CalledProcessError as e:
             print(f"Ошибка при сборке через ndk-build: {str(e)}")
             print("Возьмем готовую библиотеку из папки libs/{arch} (если вы хотите собрать библиотеку самостоятельно, попробуйте прочитать native/README.md)")
@@ -846,6 +846,31 @@ def compile_dex_additions(dex_name, file_name=None):
 		print("Файл уже существует, заменяем")
 	shutil.move(f"{working_dir}/{dex_name}/out/{dex_name}.dex", f"{app_dir}/{file_name if file_name is not None else dex_name + '.dex'}")
 
+def extract_from_apk(apk_path, extract_path, target_path):
+    with zipfile.ZipFile(apk_path, 'r') as apk:
+        files_to_extract = [f for f in apk.namelist() if f.startswith(target_path)]
+        
+        if not files_to_extract:
+            print(f"Папка или файл '{target_path}' не найдены в APK")
+            exit()
+        
+        for file in files_to_extract:
+            destination = os.path.join(extract_path, file)
+            os.makedirs(os.path.dirname(destination), exist_ok=True)
+            with apk.open(file) as source, open(destination, 'wb') as target:
+                target.write(source.read())
+                print(f"Извлечено: {file} в {destination}")
+
+def get_project_package_name():
+	manifest_path = app_dir + '/AndroidManifest.xml'
+	if not os.path.isfile(manifest_path):
+		exitWithError(f"Файл {manifest_path} не найден.")
+		return None
+	
+	tree = ET.parse(manifest_path)
+	root = tree.getroot()
+	package_name = root.get('package')
+	return package_name
 
 def update_classes(apk_path):
 	if not os.path.isfile(apk_path):
@@ -1286,42 +1311,14 @@ def arzmod_patch():
 	# REPLACE PHOTO
 	replace_files(working_dir + "/resource/mod_settings_btn", "privacy_policy")
 	replace_files(working_dir + "/resource/input_name", "input_password")
+	add_asset(f"{working_dir}/resource/game.png")
+	add_asset(f"{working_dir}/resource/chat.png")
 	if arzmodbuild:
 		replace_files(working_dir + "/resource/ic_chat_button", "ic_btn_shop")
 		replace_files(working_dir + "/resource/remote_config_defaults", "remote_config_defaults")
 
-	# CHECK OFFSETS IN NATIVE MODULE
-	libsamppath = f"{app_dir}/lib/armeabi-v7a/libsamp.so"
-	nativeoffsetspath = f"{working_dir}/native/jni/offsets.h"
-	with open(libsamppath, 'rb') as lib_file:
-		lib_data = lib_file.read()
-
-		patterns = ["INSTALL_VERSION_STRING_PATTERN", "CHAT_RENDER_PATTERN", "SOCKET_LAYER_SENDTO_PATTERN"]
-
-		for pattern in patterns:
-			pattern_value = get_define_value(nativeoffsetspath, pattern).replace("\\x", "")
-			print(f"Проверяем паттерн {pattern} - {pattern_value}")
-			if not find_pattern(lib_data, pattern_value):
-				exitWithError(f"Паттерн {pattern} - {pattern_value} не найден в {libsamppath}")
-
-	# ADD GAME LIBS
-	if usearm64:
-		add_asset(f"{working_dir}/resource/profile.json")
-		add_patched_lib("libluajit-5.1.so", "arm64-v8a")
-		add_patched_lib("libmonetloader.so", "arm64-v8a")
-	else:
-		shutil.rmtree(app_dir + "/lib/arm64-v8a")
-		add_patched_lib("libluajit-5.1.so", "armeabi-v7a")
-		add_patched_lib("libmonetloader.so", "armeabi-v7a")
-		add_patched_lib("libAML.so", "armeabi-v7a")
-		build_native_lib("native", "armeabi-v7a")
-	
-		# ADD GAME VERSION
-		add_game_version("actual", 2)
-		if project == ARIZONA_MOBILE:
-			add_game_version(1601)
-			add_game_version(1579)
-		add_game_version(1508)
+	# ADD GAME LIBS && CHECK OFFSETS IN NATIVE MODULE
+	install_game_libraries()
 
 	# SET UPDATE VERSION
 	global launcher_ver, launcher_vername, launcher_verlua
@@ -1360,11 +1357,43 @@ def arzmod_patch():
 	update_classes(working_dir + f"/{name}/dist/{name}.apk")
 	compile_dex_additions("classes_arzmod", f"classes{get_new_smali_dir_index(app_dir)}.dex")
 
+def install_game_libraries():
+	if usearm64:
+		add_asset(f"{working_dir}/resource/profile.json")
+		add_patched_lib("libluajit-5.1.so", "arm64-v8a")
+		add_patched_lib("libmonetloader.so", "arm64-v8a")
+		build_native_lib("native", "arm64-v8a")
+	else:
+		if os.path.exists(app_dir + "/lib/arm64-v8a"):
+			shutil.rmtree(app_dir + "/lib/arm64-v8a")
+		add_patched_lib("libluajit-5.1.so", "armeabi-v7a")
+		add_patched_lib("libmonetloader.so", "armeabi-v7a")
+		add_patched_lib("libAML.so", "armeabi-v7a")
+		build_native_lib("native", "armeabi-v7a")
+	
+		# ADD GAME VERSION
+		add_game_version("actual", 2)
+		if project == ARIZONA_MOBILE:
+			add_game_version(1601)
+			add_game_version(1579)
+		add_game_version(1508)
 
+		libsamppath = f"{app_dir}/lib/armeabi-v7a/libsamp.so"
+		nativeoffsetspath = f"{working_dir}/native/jni/offsets.h"
+		with open(libsamppath, 'rb') as lib_file:
+			lib_data = lib_file.read()
+
+			patterns = ["INSTALL_VERSION_STRING_PATTERN", "CHAT_RENDER_PATTERN", "SOCKET_LAYER_SENDTO_PATTERN"]
+
+			for pattern in patterns:
+				pattern_value = get_define_value(nativeoffsetspath, pattern).replace("\\x", "")
+				print(f"Проверяем паттерн {pattern} - {pattern_value}")
+				if not find_pattern(lib_data, pattern_value):
+					exitWithError(f"Паттерн {pattern} - {pattern_value} не найден в {libsamppath}")
 
 
 def exitWithError(msg):
-	print(msg)
+	print("[ERROR]", msg)
 	print(f"Build settings: Project = {'ARIZONA' if project == ARIZONA_MOBILE else 'RODINA'} | ARZMOD = {arzmodbuild} | UseARM64 = {usearm64}")
 	print("Press Enter for exit.")
 	if input() != "continue": 
@@ -1418,6 +1447,43 @@ if __name__ == "__main__":
 
 	testmode = False
 
+	if "-install" in sys.argv:
+		print(f"Устанавливаем приложение {app_dir}/dist/{name}.apk")
+		if os.path.exists(f"{app_dir}/dist/{name}.apk"):
+			subprocess.run(['adb', 'install', f"{app_dir}/dist/{name}.apk"], capture_output=True, text=True)
+		else:
+			exitWithError(f"Файл {app_dir}/dist/{name}.apk не найден")
+		exit()
+
+	if "-migrate" in sys.argv:
+		package_name = get_project_package_name()
+		if not package_name:
+			exitWithError("Не удалось получить имя пакета приложения.")
+		
+		print(f"Имя пакета приложения: {package_name}")
+		settings = get_app_settings(package_name)
+		arch = settings.get('primaryCpuAbi')
+		if settings:
+			print(f"Текущая версия приложения {settings.get('versionCode')} ({settings.get('versionName')}). Последнее обновление {settings.get('lastUpdateTime')}. Архитектура - {arch}")
+		else:
+			exitWithError("Произошла ошибка при получении текущей версии, возможно приложение не установлено.")
+		 
+		if arch == "arm64-v8a":
+			usearm64 = False
+			print("Переключаемся на ARM32")
+		elif arch == "armeabi-v7a":
+			usearm64 = True
+			print("Переключаемся на ARM64")
+		else:
+			exitWithError(f"Неизвестная архитектура: {arch}")
+
+		if os.path.exists(app_dir + f"/lib/{arch}"):
+			shutil.rmtree(app_dir + f"/lib/{arch}")
+		extract_from_apk(f"{working_dir}/{name}.apk", app_dir, f"lib/{'armeabi-v7a' if not usearm64 else 'arm64-v8a'}")
+		install_game_libraries()
+		
+		testmode = True
+
 	if "-testjava" in sys.argv:
 		if not os.path.exists(app_dir):
 				exitWithError("The project path doesn't exists, you can't running tests")
@@ -1426,10 +1492,22 @@ if __name__ == "__main__":
 		compile_dex_additions("classes_arzmod", dexname)
 
 	if "-testnative" in sys.argv:
+		package_name = get_project_package_name()
+		if not package_name:
+			exitWithError("Не удалось получить имя пакета приложения.")
+		
+		print(f"Имя пакета приложения: {package_name}")
+		settings = get_app_settings(package_name)
+		arch = settings.get('primaryCpuAbi')
+		if settings:
+			print(f"Текущая версия приложения {settings.get('versionCode')} ({settings.get('versionName')}). Последнее обновление {settings.get('lastUpdateTime')}. Архитектура - {arch}")
+		else:
+			exitWithError("Произошла ошибка при получении текущей версии, возможно приложение не установлено.")
+		 
 		if not os.path.exists(app_dir):
 				exitWithError("The project path doesn't exists, you can't running tests")
 		testmode = True
-		build_native_lib("native", "armeabi-v7a")
+		build_native_lib("native", arch)
 
 	if not testmode:
 		if "-arzmod" in sys.argv or (arzmod_dev and not "-undsgn" in sys.argv):
