@@ -87,11 +87,8 @@ signed int SocketLayer__SendTo_Hook([[maybe_unused]] int socket, int sockfd, int
 extern "C" {
     JNIEXPORT void JNICALL
     Java_com_arzmod_radare_InitGamePatch_installPacketsFix(JNIEnv* env, jobject thiz) {
-        int result = PatternHook(SOCKET_LAYER_SENDTO_PATTERN, libHandle, GetLibrarySize(libName), reinterpret_cast<uintptr_t>(SocketLayer__SendTo_Hook), reinterpret_cast<uintptr_t*>(&SocketLayer__SendTo));
-        if(result) {
-            LOGI("Hooks installed successfully (SocketLayer__SendTo_Hook), address: %x (static %x)", result, libHandle-result);
-        } else {
-            LOGE("Can't find offset from pattern (SocketLayer__SendTo_Hook)");
+        int result = PatternHook(SOCKET_LAYER_SENDTO_PATTERN, libHandle, GetLibrarySize(libName), reinterpret_cast<uintptr_t>(SocketLayer__SendTo_Hook), reinterpret_cast<uintptr_t*>(&SocketLayer__SendTo), "SocketLayer__SendTo_Hook");
+        if(!result) {
             pid_t pid = getpid();
             kill(pid, SIGKILL);
         }
@@ -100,5 +97,11 @@ extern "C" {
 
 __attribute__((constructor))
 void init_packetsfix() {
-    LOGI("PacketsFix module inited | Build time: %s", __DATE__ " " __TIME__);
+    #ifdef __arm__
+        LOGI("PacketsFix module inited | x32 | Build time: %s", __DATE__ " " __TIME__);
+    #elif defined __aarch64__
+        LOGI("PacketsFix module inited | x64 | Build time: %s", __DATE__ " " __TIME__);
+    #else
+        #error "Unsupported architecture"
+    #endif
 } 

@@ -11,6 +11,9 @@ import java.util.Map;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,6 +22,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import com.arzmod.radare.Main;
 import com.arzmod.radare.SettingsPatch;
+import com.arzmod.radare.SettingsPatch.ChatPosition;
 import com.arzmod.radare.AppContext;
 import com.arizona.game.GTASAInternal;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
@@ -128,6 +132,22 @@ public class InitGamePatch {
         }
     }
 
+    public static boolean isLibraryLoaded(String libName) {
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader("/proc/self/maps"));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("lib" + libName + ".so")) {
+                    reader.close();
+                    return true;
+                }
+            }
+            reader.close();
+        } catch (Exception e) {
+            Log.e("arzmod-initgame-module", "Error checking library: " + e.getMessage());
+        }
+        return false;
+    }
 
     public static void loadLib(String libName) {
         context = AppContext.getContext();
@@ -137,8 +157,15 @@ public class InitGamePatch {
         }
 
         String nativeLibDir = context.getApplicationInfo().nativeLibraryDir;
+        String fullLibPath = nativeLibDir + "/lib" + libName + ".so";
 
-        GTASAInternal.loadLibraryFromPath(nativeLibDir + "/lib" + libName + ".so");   
+        // if (isLibraryLoaded(libName)) {
+        //     Log.d("arzmod-initgame-module", "Library " + libName + " is already loaded");
+        //     return;
+        // }
+
+        Log.d("arzmod-initgame-module", "Loading library " + libName + " from path: " + fullLibPath);
+        GTASAInternal.loadLibraryFromPath(fullLibPath);   
     }
 
     public static void firstTimePatches() {
@@ -165,11 +192,17 @@ public class InitGamePatch {
                 }
             }
             try {
+                File debugProfile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/debug.json");
                 String outputFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Android/media/" + packageName + "/monetloader/compat/profile.json";
                 String assetFile = "profile"+ (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : "")+".json";
                 Log.d("arzmod-initgame-module", "Loading profile ver: " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : "") + ", from file: " + assetFile + ", gameArchiveCode: " + defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE));
 
-                if (isAssetExists(context, assetFile)) {
+                if(debugProfile.exists())
+                {
+                    Files.copy(debugProfile.toPath(), new File(outputFile).toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    Log.d("arzmod-initgame-module", "loaded debug profile");
+                    loadedProfile = "debug.json";
+                } else if (isAssetExists(context, assetFile)) {
                     copyFileFromAssets(context, assetFile, outputFile);
                     loadedProfile = assetFile;
                 } else {
@@ -199,18 +232,29 @@ public class InitGamePatch {
             loadLib("GTASA");
             if (Objects.equals(cpu, "arm64-v8a")) {
                 loadLib("samp");
-                if(isMonetloaderWork) loadLib("monetloader");
+                if(isMonetloaderWork)
+                {
+                    loadLib("arzmod");
+                    try {
+                        InitGamePatch.setVersion(String.valueOf(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)));
+                        InitGamePatch.versionFix(context);
+                    } catch (LinkageError e) {
+                        Log.w("arzmod-initgame-module", "Unable to call native method versionFix. Using profile system...", e);
+                    } 
+                    loadLib("monetloader");
+                }
             } else {
                 loadLib("samp" + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) : ""));
-                boolean isarzmodloaded=false;
                 if(SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_VERSION_HIDED))
                 {
-                    if(!isarzmodloaded)
-                    {
-                        loadLib("arzmod");
-                        isarzmodloaded=true;
-                    }
+                    loadLib("arzmod");
                     InitGamePatch.setVersionString("");
+                }
+                if(SettingsPatch.getSettingsKeyValue(SettingsPatch.CHAT_POSITION_ENABLED))
+                {
+                    loadLib("arzmod");
+                    ChatPosition chatPosition = SettingsPatch.getChatPosition();
+                    if(chatPosition.enabled) InitGamePatch.setChatPosition(chatPosition.x, chatPosition.y);
                 }
                 try {
                     String settingsPath = "/Android/data/" + packageName + "/files/SAMP/settings.json";
@@ -223,11 +267,7 @@ public class InitGamePatch {
                         
                         if (id == 0 && serverid == 0) {
                             Log.d("arzmod-initgame-module", "Enabling custom server fix...");
-                            if(!isarzmodloaded)
-                            {
-                                loadLib("arzmod");
-                                isarzmodloaded=true;
-                            }
+                            loadLib("arzmod");
                             InitGamePatch.installPacketsFix();
                         }
                     }
@@ -238,11 +278,7 @@ public class InitGamePatch {
                 {
                     if(loadedProfile.equals("profile.json") || loadedProfile.isEmpty())
                     {
-                        if(!isarzmodloaded)
-                        {
-                            loadLib("arzmod");
-                            isarzmodloaded=true;
-                        }
+                        loadLib("arzmod");
                         try {
                             InitGamePatch.setVersion(String.valueOf(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)));
                             InitGamePatch.versionFix(context);
