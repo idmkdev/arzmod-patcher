@@ -1,0 +1,57 @@
+name: Compare JSON Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      projects:
+        description: 'Проекты через пробел (arizona rodina)'
+        required: true
+        type: string
+        default: 'arizona rodina'
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install requests
+
+      - name: Compare JSON files and download
+        run: |
+          for project in ${{ github.event.inputs.projects }}; do
+            echo "Processing $project..."
+            python .github/workflows/compare-json.py "$project" > "files_${project}.txt"
+          done
+
+      - name: Clean and download files
+        run: |
+          for project in ${{ github.event.inputs.projects }}; do
+            echo "Downloading files for $project..."
+            rm -rf "localfiles/$project"
+            while IFS= read -r line; do
+              if [[ $line =~ ^DOWNLOAD: ]]; then
+                url=$(echo "$line" | cut -d' ' -f2)
+                path=$(echo "$line" | cut -d' ' -f3)
+                mkdir -p "localfiles/$project/$(dirname "$path")"
+                curl -L "$url" -o "localfiles/$project/$path"
+              fi
+            done < "files_${project}.txt"
+          done
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add localfiles/
+          git commit -m "[${{ github.event.inputs.projects }}] Automatic updating of ARZMOD files from the host for local use"
+          git push 
