@@ -60,6 +60,10 @@ import android.view.MotionEvent;
 import android.os.Bundle;
 import java.io.InputStream;
 import android.widget.FrameLayout;
+import android.net.Uri;
+import androidx.core.content.FileProvider;
+import java.io.File;
+import android.os.Environment;
 
 public class SettingsPatch {
     
@@ -155,13 +159,11 @@ public class SettingsPatch {
     public static class SelectableValueSetting extends AbstractSetting {
         private int defaultValue;
         private Map<Integer, String> values;
-        private int iconResId;
 
-        public SelectableValueSetting(String title, String key, int defaultValue, Map<Integer, String> values, int iconResId, SharedPreferences prefs) {
+        public SelectableValueSetting(String title, String key, int defaultValue, Map<Integer, String> values, SharedPreferences prefs) {
             super(title, key, prefs);
             this.defaultValue = defaultValue;
             this.values = values;
-            this.iconResId = iconResId;
         }
 
         @Override
@@ -621,6 +623,8 @@ public class SettingsPatch {
     public static final String IS_MODE_MODS = "is_mode_mods";
     public static final String IS_FREE_LAUNCH = "is_free_launch";
     public static final String IS_VERSION_HIDED = "is_version_hided";
+    public static final String IS_SKIP_VERIFY = "is_skip_verify";
+    public static final String VIDEO_HIDE_STEP = "video_hide_step";
     public static List<AbstractSetting> getSettingsList(SharedPreferences sharedPreferences) {
         List<AbstractSetting> settingsList = new ArrayList<>();
         String cpu = Build.CPU_ABI;
@@ -641,10 +645,17 @@ public class SettingsPatch {
         if (!cpu.equals("arm64-v8a")) {
             settingsList.add(new ChatPositionSetting("Позиция чата", CHAT_POSITION_ENABLED, sharedPreferences));
             settingsList.add(new BooleanSetting("Скрытие строки версии", IS_VERSION_HIDED, false, sharedPreferences));
-            settingsList.add(new SelectableValueSetting("Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), R.drawable.user_icon_vec, sharedPreferences));
-            
-            Map<Integer, String> versions = GameVersions.getVersions();
-            settingsList.add(new SelectableValueSetting("Версия игры", GAME_VERSION, 0, versions, R.drawable.user_icon_vec, sharedPreferences));
+        }
+
+        if(BuildConfig.GIT_BUILD)
+        {
+            settingsList.add(new BooleanSetting("[GIT] Не перезаписывать модифицированные файлы", IS_SKIP_VERIFY, false, sharedPreferences));
+        }
+
+        settingsList.add(new SelectableValueSetting("Скрывать видео загрузки", VIDEO_HIDE_STEP, 0, MapsKt.mapOf(TuplesKt.to(0, "Не скрывать"), TuplesKt.to(1, "Сразу"), TuplesKt.to(2, "При подключении")), sharedPreferences));
+        if (!cpu.equals("arm64-v8a")) {
+            settingsList.add(new SelectableValueSetting("Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), sharedPreferences));
+            settingsList.add(new SelectableValueSetting("Версия игры", GAME_VERSION, 0, GameVersions.getVersions(), sharedPreferences));
         }
         return settingsList;
     }
@@ -874,5 +885,59 @@ public class SettingsPatch {
             
         }
         return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(key, false);
+    }
+
+    public static final int getSettingsKeyInt(String key) { 
+        context = AppContext.getContext();
+        if (context == null) {
+            Log.e("arzmod-settings-module", "Context is null (getSettingsKeyInt)");
+            return 0;
+        }
+
+        return PreferenceManager.getDefaultSharedPreferences(context).getInt(key, 0);
+    }
+
+    public static void shareLogs() {
+        if (context == null) {
+            Log.e("arzmod-settings-module", "Context is null (shareLogs)");
+            return;
+        }
+
+        File externalFilesDir = context.getExternalFilesDir(null);
+        if (externalFilesDir == null) {
+            Log.e("arzmod-settings-module", "External files directory is null");
+            return;
+        }
+
+        String packageName = context.getPackageName();
+        List<File> logFiles = new ArrayList<>();
+        logFiles.add(new File(externalFilesDir, "logcat/samp.log"));
+        logFiles.add(new File(externalFilesDir, "AZVoice/azvoice.log"));
+        logFiles.add(new File(externalFilesDir, "logcat/client.log"));
+        logFiles.add(new File(context.getExternalMediaDirs()[0], "monetloader/logs/monetloader.log"));
+
+        List<File> existingLogs = new ArrayList<>();
+        for (File file : logFiles) {
+            if (file.exists() && file.length() > 0) {
+                existingLogs.add(file);
+            }
+        }
+
+        if (existingLogs.isEmpty()) {
+            Toast.makeText(context, "Логи не найдены", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+        shareIntent.setType("*/*");
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        ArrayList<Uri> uris = new ArrayList<>();
+        for (File file : existingLogs) {
+            uris.add(FileProvider.getUriForFile(context, packageName + ".fileprovider", file));
+        }
+
+        shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+        context.startActivity(Intent.createChooser(shareIntent, "Отправить логи"));
     }
 }

@@ -33,6 +33,7 @@ import com.miami.game.feature.home.ui.model.HomeExternalUiState;
 import com.miami.game.feature.home.ui.model.HomeExternalUiStateHolder;
 import android.os.Handler;
 import android.os.Looper;
+import com.arizona.game.BuildConfig;
 
 public class UpdateServicePatch {
     class FileUpdateInfo {
@@ -52,13 +53,43 @@ public class UpdateServicePatch {
     private static boolean costylToast = false;
     private static Context context;
     private static boolean DEBUG = false;
+    private static Set<String> serviceFiles = new HashSet<>();
+    private static boolean isInitialized = false;
+
+
 
     public UpdateServicePatch() {
         context = AppContext.getContext();
         if (context == null) {
             Log.e("arzmod-updsrv-module", "Context is null (UpdateServicePatch)");
         }
+        if (BuildConfig.GIT_BUILD) initializeServiceFiles(context);
     }
+
+    public static void initializeServiceFiles(Context context) {
+        if (isInitialized) return;
+        
+        if (BuildConfig.GIT_BUILD) {
+            try {
+                BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(context.getAssets().open("arzmod/markup.txt"))
+                );
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    line = line.trim();
+                    if (!line.isEmpty()) {
+                        serviceFiles.add(line);
+                    }
+                }
+                reader.close();
+            } catch (Exception e) {
+                Log.e("arzmod-app-module", "Error reading markup.txt", e);
+            }
+        }
+        
+        isInitialized = true;
+    }
+
 
     private static void retrySetHomeUi(final boolean value, final int maxAttempts) {
         final int[] attempts = {0};
@@ -139,7 +170,28 @@ public class UpdateServicePatch {
         }
     }
 
+    public static boolean isServiceFile(File file) {
+        if (!isInitialized) return false;
+
+        if (BuildConfig.GIT_BUILD) {
+            String filePath = file.getPath();
+            for (String servicePath : serviceFiles) {
+                if (filePath.endsWith(servicePath)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
     public boolean isUserFile(File file) {
+        if(BuildConfig.GIT_BUILD && isServiceFile(file))
+        {
+            Log.v("arzmod-updsrv-module", file.getName() + " is a service file");
+            return true;
+        }
+
         if (!SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_MODS_MODE)) return false;
 
         String packageName = context.getPackageName();

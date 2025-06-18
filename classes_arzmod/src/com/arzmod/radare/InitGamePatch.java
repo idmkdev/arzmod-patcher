@@ -30,8 +30,11 @@ import com.arizona.game.GTASA;
 import com.arizona.game.BuildConfig;
 import com.arizona.launcher.util.UtilsKt;
 import ru.mrlargha.commonui.core.UIElementID;
+import ru.mrlargha.commonui.elements.authorization.presentation.screen.RegistrationVideoBackground;
 import androidx.preference.PreferenceManager;
 import org.json.JSONObject;
+import android.widget.TextView;
+import java.lang.reflect.Field;
 
 public class InitGamePatch {
     private static Context context;
@@ -256,23 +259,11 @@ public class InitGamePatch {
                     ChatPosition chatPosition = SettingsPatch.getChatPosition();
                     if(chatPosition.enabled) InitGamePatch.setChatPosition(chatPosition.x, chatPosition.y);
                 }
-                try {
-                    String settingsPath = "/Android/data/" + packageName + "/files/SAMP/settings.json";
-                    File settingsFile = new File(Environment.getExternalStorageDirectory(), settingsPath);
-                    if (settingsFile.exists()) {
-                        JSONObject settings = new JSONObject(new String(Files.readAllBytes(settingsFile.toPath())));
-                        JSONObject server = settings.getJSONObject("client").getJSONObject("server");
-                        int id = server.getInt("id");
-                        int serverid = server.getInt("serverid");
-                        
-                        if (id == 0 && serverid == 0) {
-                            Log.d("arzmod-initgame-module", "Enabling custom server fix...");
-                            loadLib("arzmod");
-                            InitGamePatch.installPacketsFix();
-                        }
-                    }
-                } catch (Exception e) {
-                    Log.e("arzmod-initgame-module", "Ошибка при проверке settings.json: " + e.getMessage());
+                if(isCustomServer())
+                {
+                    Log.d("arzmod-initgame-module", "Enabling custom server fix...");
+                    loadLib("arzmod");
+                    InitGamePatch.installPacketsFix();
                 }
                 if(isMonetloaderWork)
                 {
@@ -355,6 +346,7 @@ public class InitGamePatch {
             Log.w("arzmod-initgame-module", "Unable to call native method InitSetting", e);
         }
     }
+    
 
     public static String getUniqueID() {
         SharedPreferences sharedPreferences = SettingsPatch.getSettingsPreferences();
@@ -367,5 +359,59 @@ public class InitGamePatch {
         edit.putString("uniqueID", uuid);
         edit.apply();
         return uuid;
+    }
+
+    public static boolean isCustomServer() {
+        context = AppContext.getContext();
+        if (context == null) {
+            Log.e("arzmod-initgame-module", "Context is null (isCustomServer)");
+            return false;
+        }
+        String packageName = context.getPackageName();
+        try {
+            String settingsPath = "/Android/data/" + packageName + "/files/SAMP/settings.json";
+            File settingsFile = new File(Environment.getExternalStorageDirectory(), settingsPath);
+            if (settingsFile.exists()) {
+                JSONObject settings = new JSONObject(new String(Files.readAllBytes(settingsFile.toPath())));
+                JSONObject server = settings.getJSONObject("client").getJSONObject("server");
+                int id = server.getInt("id");
+                int serverid = server.getInt("serverid");
+                
+                if (id == 0 && serverid == 0) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            Log.e("arzmod-initgame-module", "Ошибка при проверке settings.json: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public static void setAwaitText(RegistrationVideoBackground registrationVideoBackground, String text)
+    {
+        if(text.equals("Подключились. Входим в игру...") && (SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 2 || isCustomServer())) hideVideo(registrationVideoBackground);
+    }
+
+    public static void hideVideo(RegistrationVideoBackground registrationVideoBackground) {
+        if(SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 0) return;
+        try {
+            Field bindingField = registrationVideoBackground.getClass().getDeclaredField("videoBackgroundBinding");
+            bindingField.setAccessible(true);
+            Object binding = bindingField.get(registrationVideoBackground);
+            
+            Field videoBgField = binding.getClass().getDeclaredField("videoBg");
+            videoBgField.setAccessible(true);
+            Object videoBg = videoBgField.get(binding);
+            videoBg.getClass().getMethod("stopPlayback").invoke(videoBg);
+            
+            Field videoField = binding.getClass().getDeclaredField("video");
+            videoField.setAccessible(true);
+            Object video = videoField.get(binding);
+            video.getClass().getMethod("setVisibility", int.class).invoke(video, 8);
+            
+            videoBg.getClass().getMethod("setVisibility", int.class).invoke(videoBg, 8);
+        } catch (Exception e) {
+            Log.e("arzmod-init-game", "Failed to stop video: " + e.getMessage());
+        }
     }
 }

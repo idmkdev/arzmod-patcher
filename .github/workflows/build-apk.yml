@@ -61,6 +61,15 @@ jobs:
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Set release changelog
+        id: changelog
+        run: |
+          if [ -z "${{ steps.get_commits.outputs.commits }}" ]; then
+            echo "changelog=Изменений с последнего релиза нет." >> $GITHUB_OUTPUT
+          else
+            echo "changelog=${{ steps.get_commits.outputs.commits }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Git Tag
         if: github.event_name == 'workflow_dispatch' && inputs.create_release
         id: create_tag
@@ -123,32 +132,47 @@ jobs:
       - name: Prepare for building
         run: chmod +x ./arzmob-classes/dex-tools-v2.4/d2j-dex2jar.sh
 
-      - name: Build APKs
+      - name: Build Arizona x32
         run: |
           mkdir -p dist
-          python main.py -actual && mv ./app-debug/dist/app-debug.apk ./dist/app-arizona-x32-patched.apk
-          python main.py -actual -x64 && mv ./app-debug/dist/app-debug.apk ./dist/app-arizona-x64-patched.apk
-          python main.py -actual -rodina && mv ./app-debug/dist/app-debug.apk ./dist/app-rodina-x32-patched.apk
-          python main.py -actual -rodina -x64 && mv ./app-debug/dist/app-debug.apk ./dist/app-rodina-x64-patched.apk
+          python main.py -actual
+          mv ./app-debug/dist/app-debug.apk ./dist/app-arizona-x32-patched.apk
 
-
-      - name: Upload APKs as artifacts
+      - name: Upload Arizona x32
         uses: actions/upload-artifact@v4
         with:
           name: app-arizona-x32-patched
           path: ./dist/app-arizona-x32-patched.apk
 
-      - uses: actions/upload-artifact@v4
+      - name: Build Arizona x64
+        run: |
+          python main.py -actual -x64
+          mv ./app-debug/dist/app-debug.apk ./dist/app-arizona-x64-patched.apk
+
+      - name: Upload Arizona x64
+        uses: actions/upload-artifact@v4
         with:
           name: app-arizona-x64-patched
           path: ./dist/app-arizona-x64-patched.apk
 
-      - uses: actions/upload-artifact@v4
+      - name: Build Rodina x32
+        run: |
+          python main.py -actual -rodina
+          mv ./app-debug/dist/app-debug.apk ./dist/app-rodina-x32-patched.apk
+
+      - name: Upload Rodina x32
+        uses: actions/upload-artifact@v4
         with:
           name: app-rodina-x32-patched
           path: ./dist/app-rodina-x32-patched.apk
 
-      - uses: actions/upload-artifact@v4
+      - name: Build Rodina x64
+        run: |
+          python main.py -actual -rodina -x64
+          mv ./app-debug/dist/app-debug.apk ./dist/app-rodina-x64-patched.apk
+
+      - name: Upload Rodina x64
+        uses: actions/upload-artifact@v4
         with:
           name: app-rodina-x64-patched
           path: ./dist/app-rodina-x64-patched.apk
@@ -164,7 +188,7 @@ jobs:
             Номер сборки: ${{ steps.get_version.outputs.launcher_version }}
 
             Изменения с последнего релиза:
-            ${{ steps.get_commits.outputs.commits }}
+            ${{ steps.changelog.outputs.changelog }}
           files: |
             ./dist/app-arizona-x32-patched.apk
             ./dist/app-arizona-x64-patched.apk

@@ -17,4 +17,4 @@ native/jni/Android.mk
 
 # Ignore trash
 __pycache__/
-classes6/out/
+classes_arzmod/out/

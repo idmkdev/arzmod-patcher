@@ -52,6 +52,11 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.Writer;
+import android.app.AlertDialog;
+import android.widget.Button;
+import android.widget.TextView;
+import android.content.DialogInterface;
+import java.util.Arrays;
 
 public class ApplicationStart {
     private static final long MIN_START_INTERVAL = 1000;
@@ -491,5 +496,145 @@ public class ApplicationStart {
                 }
             }
         }
+    }
+
+    public static void gitCheckUpdate() {
+        Context context = AppContext.getContext();
+        if (context == null) {
+            Log.e("arzmod-app-module", "Context is null");
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String gitUpdateUrl = null;
+                    try {
+                        gitUpdateUrl = (String) BuildConfig.class.getField("GIT_UPDATE_URL").get(null);
+                    } catch (NoSuchFieldException | IllegalAccessException e) {
+                        Log.e("arzmod-app-module", "Why this method called but GIT_UPDATE_URL doesn't exists in BuildConfig?");
+                        return;
+                    }
+
+                    if (gitUpdateUrl != null && !gitUpdateUrl.isEmpty()) {
+                        URL url = new URL(gitUpdateUrl);
+                    
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
+                        connection.setDoInput(true);
+                        connection.connect();
+
+                        InputStream input = connection.getInputStream();
+                        String jsonResponse = new java.util.Scanner(input).useDelimiter("\\A").next();
+                        input.close();
+
+                        JSONObject json = new JSONObject(jsonResponse);
+                        String latestVersion = json.getString("tag_name").replace("v", "");
+                        final String releaseUrl = json.getString("html_url");
+                        
+                        int currentVersion = BuildConfig.VERSION_CODE;
+                        int newVersion = Integer.parseInt(latestVersion);
+
+                        if (newVersion > currentVersion) {
+                            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (!(context instanceof Activity)) return;
+                                    Activity activity = (Activity) context;
+                                    if (activity.isFinishing() || activity.isDestroyed()) return;
+
+                                    AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+                                    builder.setTitle("Доступно обновление");
+                                    builder.setMessage("Доступна новая версия лаунчера: " + newVersion + "\n\nРекомендуется обновить приложение для корректной работы.");
+
+                                    builder.setPositiveButton("Обновить", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl));
+                                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                            context.startActivity(intent);
+                                        }
+                                    });
+
+                                    builder.setNegativeButton("Пропустить", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            dialog.dismiss();
+                                        }
+                                    });
+
+                                    builder.setCancelable(false);
+                                    builder.show();
+                                }
+                            });
+                        } else {
+                            Log.e("arzmod-app-module", "Why this method called but GIT_UPDATE_URL doesn't exists in BuildConfig?");
+                            return;
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e("arzmod-app-module", "Error checking for updates", e);
+                }
+
+                try {
+                    Log.d("arzmod-app-module", "Starting files extraction...");
+                    InputStream zipStream = context.getAssets().open("arzmod/files.zip");
+                    java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(zipStream);
+                    java.util.zip.ZipEntry entry;
+
+                    while ((entry = zis.getNextEntry()) != null) {
+                        String entryName = entry.getName();
+                        if (entry.isDirectory()) continue;
+
+                        if (entryName.startsWith("data/") || entryName.startsWith("media/")) {
+                            String[] parts = entryName.split("/");
+                            if (parts.length >= 3) {
+                                String packageName = parts[1];
+                                File targetDir = null;
+                                
+                                if (entryName.startsWith("data/")) {
+                                    String relativePath = entryName.substring(5 + packageName.length() + 1);
+                                    targetDir = new File(context.getExternalFilesDir(null).getParentFile(), relativePath);
+                                } else if (entryName.startsWith("media/")) {
+                                    String relativePath = entryName.substring(6 + packageName.length() + 1);
+                                    targetDir = new File(context.getExternalMediaDirs()[0], relativePath);
+                                }
+
+                                if (targetDir != null) {
+                                    boolean shouldExtract = true;
+                                    
+                                    if (targetDir.exists() && SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_SKIP_VERIFY)) {
+                                        shouldExtract = false;
+                                        Log.d("arzmod-app-module", "Skipping rewrite file: " + targetDir.getAbsolutePath());
+                                    }
+
+                                    if (shouldExtract) {
+                                        Log.d("arzmod-app-module", "Extracting: " + entryName + " -> " + targetDir.getAbsolutePath());
+
+                                        try {
+                                            targetDir.getParentFile().mkdirs();
+                                            java.io.FileOutputStream fos = new java.io.FileOutputStream(targetDir);
+                                            byte[] buffer = new byte[1024];
+                                            int len;
+                                            while ((len = zis.read(buffer)) > 0) {
+                                                fos.write(buffer, 0, len);
+                                            }
+                                            fos.close();
+                                        } catch (Exception e) {
+                                            Log.e("arzmod-app-module", "Error extracting file: " + entryName, e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        zis.closeEntry();
+                    }
+                    zis.close();
+                    Log.d("arzmod-app-module", "Files extraction completed");
+                } catch (Exception e) {
+                    Log.e("arzmod-app-module", "Error extracting files", e);
+                }
+            }
+        }).start();
     }
 }
