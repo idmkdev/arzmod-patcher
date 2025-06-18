@@ -43,6 +43,7 @@ jobs:
                 url=$(echo "$line" | cut -d' ' -f2)
                 path=$(echo "$line" | cut -d' ' -f3)
                 mkdir -p "localfiles/$project/$(dirname "$path")"
+                echo "Downloading $url"
                 curl -L "$url" -o "localfiles/$project/$path"
               fi
             done < "files_${project}.txt"
