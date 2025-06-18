@@ -1,0 +1,1 @@
+Папка MonetLoader перемещена по пути Android/media/com.arizona.game/monetloader
