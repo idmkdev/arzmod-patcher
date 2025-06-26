@@ -229,6 +229,8 @@ def add_game_version(version, bypasscheck=0):
 		if isinstance(version, str):
 			version = ""
 
+
+		is_own_native = os.path.exists(f"{working_dir}/native/jni/Android.mk")
 		nativemodulepath = f"{working_dir}/native/jni/monetloader.h"
 		profilepath = f"{working_dir}/resource/profile{str(version)}.json"
 		libpath = add_patched_lib(f"libsamp{str(version)}.so", "armeabi-v7a")
@@ -240,10 +242,12 @@ def add_game_version(version, bypasscheck=0):
 
 		if bypasscheck == 2:
 			print(f"Проверяем оффсеты: {nativemodulepath}")
-			if not os.path.exists(nativemodulepath):
+			if not is_own_native:
 				print("Нативная реализация не найдена. Пропускаем проверку профиля...")
 				add_asset(profilepath)
 				return
+			if not os.path.exists(nativemodulepath):
+				exitWithError("Не найден модуль с паттернами")
 			try:
 				receiveignorerpc_pattern = get_define_value(nativemodulepath, f"ReceiveIgnoreRPCPattern{version}").replace("\\x", "")
 				cnetgame_ctor_pattern = get_define_value(nativemodulepath, f"CNetGame_ctorPattern{version}").replace("\\x", "")
@@ -259,9 +263,9 @@ def add_game_version(version, bypasscheck=0):
 
 				print("Библиотека проверена и доступна для использования. Обновление оффсетов не требуется")
 				add_asset(profilepath)
+				return
 			except Exception as e:
 				exitWithError(f"Ошибка при проверке библиотеки: {e}")
-			return
 
 		with open(profilepath, 'r', encoding='utf-8') as json_file:
 			data = json.load(json_file)
@@ -323,6 +327,34 @@ def add_asset(base_path):
 			print(f"Ошибка: путь {base_path} не существует или недоступен.")
 	except Exception as e:
 		raise RuntimeError(f"Произошла ошибка: {e}")
+	
+def delete_line_after(file_path, after_line, line_to_delete):
+	try:
+		with open(file_path, 'r', encoding='utf-8') as file:
+			lines = file.readlines()
+
+		found_after_line = False
+		lines_to_delete = []
+
+		for line in lines:
+			if after_line in line:
+				found_after_line = True
+			if found_after_line and line_to_delete in line:	
+				lines_to_delete.append(line)
+				break
+
+		if lines_to_delete:
+			with open(file_path, 'w', encoding='utf-8') as file:
+				for line in lines:
+					if line not in lines_to_delete:
+						file.write(line)
+
+		if len(lines_to_delete) > 0:
+			print(f"Удалено строк: {len(lines_to_delete)}")
+		else:
+			print("Строки для удаления не найдены")
+	except Exception as e:
+		exitWithError(f"Произошла ошибка: {e}")
 
 
 def delete_lines(file_path, substring):
@@ -979,7 +1011,6 @@ def run_command(command, cwd=None, check=True):
 	except subprocess.CalledProcessError as e:
 		exitWithError(f"Error: {e}")
 
-
 def arzmod_patch():
 	repo_owner, repo_name = get_github_repo()
 	miami_path = app_dir + f"/{arz_miami_path}"
@@ -998,11 +1029,12 @@ def arzmod_patch():
 	search_and_replace(miami_path + "/com/miami/game/feature/download/dialog/ui/setup/DescriptionTextKt.smali", r". \u0412\u044b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c?", r" \u002e\u0020\u0412\u044b\u0020\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0020\u0445\u043e\u0442\u0438\u0442\u0435\u0020\u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c\u003f\u0020\u0415\u0441\u043b\u0438\u0020\u0432\u044b\u0020\u0445\u043e\u0442\u0438\u0442\u0435\u0020\u043f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u0020\u002d\u0020\u043d\u0430\u0436\u043c\u0438\u0442\u0435\u0020\u043a\u043d\u043e\u043f\u043a\u0443\u0020\u041e\u0422\u041c\u0415\u041d\u0410\u002e\u0020\u0020\u0422\u0430\u043a\u0020\u0436\u0435\u0020\u043c\u043e\u0436\u043d\u043e\u0020\u043f\u043e\u043b\u043d\u043e\u0441\u0442\u044c\u044e\u0020\u043e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c\u0020\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0443\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439\u0020\u043a\u0435\u0448\u0430\u0020\u0438\u0433\u0440\u044b\u0020\u0432\u0020\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445\u0020\u002d\u0020\u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438\u0020\u0041\u0052\u005a\u004d\u004f\u0044")
 	
 	search_and_replace(miami_path + "/com/miami/game/feature/settings/ui/model/SettingsUiState$Companion.smali", "https://vk.com/agm_workshop", "https://t.me/cleodis" if arzmodbuild else f"https://github.com/{repo_owner}/{repo_name}/issues")
+	delete_line_after(src_path + "/com/arizona/launcher/MainEntrench.smali", ".method protected onCreate(", "Landroid/widget/Toast;->show")
 	
 	if arzmodbuild:		
 		# TEXT PATCH
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u0414\u0430\u043d\u043d\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u0430, \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e", r"\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u0020\u043a\u043b\u0438\u0435\u043d\u0442\u0430\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0020\u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0441\u044f\u0020\u0441\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u043c\u002c\u0020\u0447\u0442\u043e\u0431\u044b\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043d\u0435\u0020\u0431\u044b\u043b\u043e\u0020\u043b\u0438\u0448\u043d\u0438\u0445\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u043e\u0432\u002e\u0020\u041f\u0440\u043e\u0447\u0438\u0442\u0430\u0442\u044c\u0020\u043f\u043e\u0434\u0440\u043e\u0431\u043d\u043e\u0441\u0442\u0438\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f\u0020\u043c\u043e\u0436\u043d\u043e\u0020\u0432\u0020\u0074\u002e\u006d\u0065\u002f\u0043\u006c\u0065\u006f\u0041\u0072\u0069\u007a\u006f\u006e\u0061")
-		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0432\u0430\u0448\u0435 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0438 \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430", r"\u041b\u0430\u0443\u043d\u0447\u0435\u0440\u0443\u0020\u043d\u0435\u0020\u0443\u0434\u0430\u043b\u043e\u0441\u044c\u0020\u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c\u0020\u043d\u0443\u0436\u043d\u0443\u044e\u0020\u0435\u043c\u0443\u0020\u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u002c\u0020\u0441\u0435\u0440\u0432\u0435\u0440\u0430\u0020\u0041\u0052\u005a\u004d\u004f\u0044\u0020\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e\u0020\u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0020\u0415\u0441\u043b\u0438\u0020\u0441\u0020\u0432\u0430\u0448\u0435\u043c\u0020\u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0020\u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435\u043c\u0020\u0432\u0441\u0451\u0020\u0445\u043e\u0440\u043e\u0448\u043e\u002c\u0020\u043d\u0430\u0436\u043c\u0438\u0442\u0435\u0020\u043a\u043d\u043e\u043f\u043a\u0443\u0020\u0027\u0432\u044b\u0439\u0442\u0438\u0027\u0020\u0415\u0441\u043b\u0438\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043e\u0441\u0442\u0430\u043b\u0438\u0441\u044c\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u044b\u002c\u0020\u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435\u0020\u0432\u0020\u0433\u0440\u0443\u043f\u043f\u0443\u0020\u002d\u0020\u0074\u002e\u006d\u0065\u002f\u0063\u006c\u0065\u006f\u0064\u0069\u0073")
+		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0432\u0430\u0448\u0435 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0438 \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430", r"\u041b\u0430\u0443\u043d\u0447\u0435\u0440\u0443\u0020\u043d\u0435\u0020\u0443\u0434\u0430\u043b\u043e\u0441\u044c\u0020\u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c\u0020\u043d\u0443\u0436\u043d\u0443\u044e\u0020\u0435\u043c\u0443\u0020\u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u002c\u0020\u0441\u0435\u0440\u0432\u0435\u0440\u0430\u0020\u0041\u0052\u005a\u004d\u004f\u0044\u0020\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e\u0020\u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0020\u0415\u0441\u043b\u0438\u0020\u0441\u0020\u0432\u0430\u0448\u0435\u043c\u0020\u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0020\u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435\u043c\u0020\u0432\u0441\u0451\u0020\u0445\u043e\u0440\u043e\u0448\u043e\u002c\u0020\u043d\u0430\u0436\u043c\u0438\u0442\u0435\u0020\u043a\u043d\u043e\u043f\u043a\u0443\u0020\u0027\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c\u0027\u0020\u0415\u0441\u043b\u0438\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043e\u0441\u0442\u0430\u043b\u0438\u0441\u044c\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u044b\u002c\u0020\u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435\u0020\u0432\u0020\u0433\u0440\u0443\u043f\u043f\u0443\u0020\u002d\u0020\u0074\u002e\u006d\u0065\u002f\u0063\u006c\u0065\u006f\u0064\u0069\u0073")
 		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench$IncomingHandler.smali", r"\u0412\u044b\u0439\u0442\u0438", r"\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c")
 	
 		# FIREBASE PATCH + classes_arzmod/src/com/arzmod/radare/FirebaseAdd.java (back arz connection)
@@ -1036,12 +1068,11 @@ def arzmod_patch():
 
 		# ARZMOD TECH PATCH
 		search_and_replace(src_path + "/com/arizona/launcher/di/ArizonaLauncherAPIModule.smali", "https://api.arizona-five.com/", "https://api.arzmod.com/")
-		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench.smali", " release_web\"", " arzmod\"")
 		search_and_replace(miami_path + "/com/miami/game/feature/home/ui/model/HomeUiState$Companion.smali", "https://arizona-rp.com/shop" if project == ARIZONA_MOBILE else "https://rodina-rp.com/shop", "https://t.me/cleodis")
 		search_and_replace(ui_path + "/ru/mrlargha/commonui/elements/hud/presentation/Hud.smali", "arizona-rp.com" if project == ARIZONA_MOBILE else "rodina-rp.com", "arzmod.com")
 		if project == ARIZONA_MOBILE: search_and_replace(ui_path + "/ru/mrlargha/commonui/elements/hud/presentation/api/HudApi.smali", "desktop/ping/Arizona/ping.json", "https://radarebot.hhos.net/api/serverlist")
 		search_and_replace_after(miami_path + "/com/miami/game/core/connection/resolver/data/ServersList.smali", ".method public final newsServers", "main_api", "main_arizona_news")
-		search_and_replace_after(miami_path + "/com/miami/game/core/connection/resolver/data/ServersList.smali", ".method public final newsServers", "reserve_api", "main_arizona_news")
+		search_and_replace_after(miami_path + "/com/miami/game/core/connection/resolver/data/ServersList.smali", ".method public final newsServers", "reserve_api", "reserve_arizona_news")
 		insert_smali_code_after_line(src_path + "/com/arizona/launcher/MainEntrench.smali", ".method protected onCreate", "invoke-super {p0, p1}, Lcom/arizona/launcher/Hilt_MainEntrench;->onCreate(Landroid/os/Bundle;)V", """
 			invoke-static {}, Lcom/arzmod/radare/ApplicationStart;->showBanner()V
 		""")
@@ -1112,9 +1143,8 @@ def arzmod_patch():
 			invoke-static {}, Lcom/arzmod/radare/ApplicationStart;->gitCheckUpdate()V
 		""")
 
-		search_and_replace(src_path + "/com/arizona/launcher/MainEntrench.smali", " release_web\"", " arzmod_community\"")
 		append_to_file(src_path + "/com/arizona/game/BuildConfig.smali", ".field public static final GIT_BUILD:Z = true")
-		append_to_file(src_path + "/com/arizona/game/BuildConfig.smali", f".field public static final GIT_UPDATE_URL:Ljava/lang/String; = \"https://api.github.com/{repo_owner}/{repo_name}/releases/latest\"")
+		append_to_file(src_path + "/com/arizona/game/BuildConfig.smali", f".field public static final GIT_UPDATE_URL:Ljava/lang/String; = \"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest\"")
 
 		# ADD LOCAL FILES FROM ARZMOD AND COMFORTABLE USE ARIZONA FILESERVERS
 		localfiles = f"{working_dir}/localfiles"
@@ -1339,15 +1369,15 @@ def arzmod_patch():
 			return-void
 		.end method
 	""")
-	insert_code_before_line(src_path + "/com/arizona/game/GTASA.smali", ".method private native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", """
+	insert_code_before_line(src_path + "/com/arizona/game/GTASA.smali", ".method private native InitSetting(", """
 		.method public static native InitModloaderConfig(I)V
 		.end method
 	""")
-	insert_code_before_line(src_path + "/com/arizona/game/GTASA.smali", ".method private native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", """
+	insert_code_before_line(src_path + "/com/arizona/game/GTASA.smali", ".method private native InitSetting(", """
 		.method public static native InitSetting(ZIZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V
 		.end method
 	""")
-	search_and_replace(src_path + "/com/arizona/game/GTASA.smali", ".method private native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", ".method public static native InitSetting(ZIZZLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V") 
+	search_and_replace(src_path + "/com/arizona/game/GTASA.smali", ".method private native InitSetting(", ".method public static native InitSetting(") 
 
 	# SETTINGS PATCH + classes_arzmod/src/com/arzmod/radare/SettingsPatch.java
 	insert_smali_code_after_line(src_path + "/com/arizona/launcher/MainEntrench.smali", ".method private static final onCreate$lambda$4", ".locals", """
@@ -1398,11 +1428,15 @@ def arzmod_patch():
 	""")
 	insert_smali_code_after_line(ui_path + "/ru/mrlargha/commonui/elements/authorization/presentation/screen/RegistrationVideoBackground.smali", ".method private final preload", "Lru/mrlargha/commonui/elements/authorization/presentation/screen/RegistrationVideoBackground;->selectVideoMode", """
 		move-object v0, p0
-		invoke-static {v0}, Lcom/arzmod/radare/InitGamePatch;->hideVideo(Lru/mrlargha/commonui/elements/authorization/presentation/screen/RegistrationVideoBackground;)V
+		const/4 v1, 0x1
+		invoke-static {v0, v1}, Lcom/arzmod/radare/InitGamePatch;->hideVideo(Lru/mrlargha/commonui/elements/authorization/presentation/screen/RegistrationVideoBackground;I)V
 	""")
 
 
 	# SAVECONTEXT FOR COMPATIBLE + classes_arzmod/src/com/arzmod/radare/AppContext.java
+	insert_smali_code_after_line(src_path + "/com/arizona/launcher/MainEntrench.smali", ".method protected onCreate", "invoke-super {p0, p1}, Lcom/arizona/launcher/Hilt_MainEntrench;->onCreate(Landroid/os/Bundle;)V", """
+		invoke-static {}, Lcom/arzmod/radare/ApplicationStart;->launcherStart()V
+	""")
 	insert_smali_code_after_line(src_path + "/com/arizona/game/GTASA.smali", ".method public onCreate", ".locals", """
 		invoke-virtual {p0}, Lcom/arizona/launcher/MainActivity;->getApplicationContext()Landroid/content/Context;
 		move-result-object v0

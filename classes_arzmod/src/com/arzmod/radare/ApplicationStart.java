@@ -61,6 +61,7 @@ import java.util.Arrays;
 public class ApplicationStart {
     private static final long MIN_START_INTERVAL = 1000;
     private static final String BANNER_API_URL = "https://api.arzmod.com/banner?version="+ BuildConfig.VERSION_CODE;
+    private static final String BANNER_API_URL_FALLBACK = "https://raw.githubusercontent.com/idmkdev/arzmod-patcher/refs/heads/main/configs/banner";
     private static final String LAST_BANNER_ID_KEY = "last_banner_id";
     private static final int ANIMATION_DURATION = 300;
     private static final int CLOSE_BUTTON_SIZE = 40;
@@ -160,6 +161,16 @@ public class ApplicationStart {
         }
     }
 
+    public static void launcherStart() {
+        Context context = AppContext.getContext();
+        if (context == null) {
+            Log.e("arzmod-app-module", "Context is null");
+            return;
+        }
+
+        Toast.makeText(context, Build.CPU_ABI + " " + BuildConfig.VERSION_NAME + " " + (BuildConfig.GIT_BUILD  ? "arzmod_community" : "arzmod"), Toast.LENGTH_SHORT).show();
+    }
+
     public static void showBanner() {
         Context context = AppContext.getContext();
         if (context == null) {
@@ -177,16 +188,34 @@ public class ApplicationStart {
             @Override
             public void run() {
                 try {
-                    URL url = new URL(BANNER_API_URL);
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setDoInput(true);
-                    connection.connect();
-                    InputStream input = connection.getInputStream();
-                    String jsonResponse = new java.util.Scanner(input).useDelimiter("\\A").next();
-                    input.close();
-
-                    JSONObject json = new JSONObject(jsonResponse);
-                    if (json.length() == 0) {
+                    JSONObject json = null;
+                    try {
+                        URL url = new URL(BANNER_API_URL);
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        connection.setDoInput(true);
+                        connection.connect();
+                        InputStream input = connection.getInputStream();
+                        String jsonResponse = new java.util.Scanner(input).useDelimiter("\\A").next();
+                        input.close();
+                        json = new JSONObject(jsonResponse);
+                    } catch (Exception e) {
+                        Log.e("arzmod-app-module", "Primary banner URL failed, trying fallback", e);
+                    }
+                    if (json == null || json.length() == 0) {
+                        try {
+                            URL url = new URL(BANNER_API_URL_FALLBACK);
+                            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                            connection.setDoInput(true);
+                            connection.connect();
+                            InputStream input = connection.getInputStream();
+                            String jsonResponse = new java.util.Scanner(input).useDelimiter("\\A").next();
+                            input.close();
+                            json = new JSONObject(jsonResponse);
+                        } catch (Exception e2) {
+                            Log.e("arzmod-app-module", "Fallback banner URL also failed", e2);
+                        }
+                    }
+                    if (json == null || json.length() == 0) {
                         return;
                     }
 

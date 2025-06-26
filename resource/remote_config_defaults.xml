@@ -1,191 +1,86 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<defaults>
-  <entry>
-    <key>main_rodina_news</key>
-    <value>https://api.arzmod.com/</value>
-  </entry>
+<?xml version="1.0" encoding="UTF-8"?><defaults>
   <entry>
     <key>main_arizona_news</key>
     <value>https://api.arzmod.com/</value>
   </entry>
   <entry>
-    <key>cdn_GAS_STATION_RODINA_PICASSO</key>
-    <value>https://pc.rod-ins.com/resource/frontend/items/</value>
-  </entry>
-  <entry>
-    <key>cdn_EXTERNAL_LOG_BASE_URL</key>
-    <value>https://ch.arzmod.com</value>
-  </entry>
-  <entry>
-    <key>cdn_QUEST_AWARDS_RODINA_PICASSO_URL</key>
-    <value>https://pc.rod-ins.com/resource/frontend/</value>
-  </entry>
-  <entry>
-    <key>cdn_RODINA_RESOURCE_URL</key>
-    <value>https://mob.azinternal.com/resource/</value>
-  </entry>
-  <entry>
-    <key>main_resource</key>
-    <value>https://cdn.azresources.cloud/</value>
-  </entry>
-  <entry>
-    <key>cdn_RODINA_URL_VEHICLE</key>
-    <value>https://pc.rod-ins.com/resource/inventory/vehicles/512/</value>
-  </entry>
-  <entry>
-    <key>cdn_CHOOSE_CRAFT_INTERIOR_PICASSO</key>
-    <value>https://mob.azinternal.com/resource/frontend/models/128/</value>
-  </entry>
-  <entry>
-    <key>cdn_NEWS_AUTH_BASE_URL</key>
-    <value>https://api-samp.arizona-five.com/</value>
-  </entry>
-  <entry>
-    <key>main_rodina_ping</key>
-    <value>https://api.arizona-five.com</value>
-  </entry>
-  <entry>
-    <key>cdn_ARIZONA_URL_SKINS</key>
-    <value>https://pc.az-ins.com/resource/frontend/inventory/skins/512/</value>
-  </entry>
-  <entry>
-    <key>cdn_NEIGHBOR_GAME_PICASSO</key>
-    <value>https://rodina.gtasounds.com/neighbors_from_hell/</value>
-  </entry>
-  <entry>
-    <key>cdn_BANNERS_RODINA_PICASSO_URL</key>
-    <value>https://rodina.gtasounds.com/tpevent/images/</value>
-  </entry>
-  <entry>
-    <key>launcher_DONATE_SHOP_ARIZONA</key>
-    <value>https://arizona-rp.com/shop</value>
-  </entry>
-  <entry>
-    <key>main_arizona_ping</key>
-    <value>https://api.arizona-five.com</value>
-  </entry>
-  <entry>
-    <key>cdn_IMAGE_DUCK_GAME_CDN_URL</key>
-    <value>https://rodina.gtasounds.com</value>
-  </entry>
-  <entry>
-    <key>cdn_BATTLEPASS_ROULETE_ARIZONA</key>
-    <value>https://pc-cdn-az-ins.dev.arizona.games/resource/image/donate/</value>
-  </entry>
-  <entry>
-    <key>main_api</key>
-    <value>https://api.arizona-five.com</value>
-  </entry>
-  <entry>
-    <key>cnd_ARIZONA_URL_VEHICLE</key>
-    <value>https://pc.az-ins.com/resource/frontend/inventory/vehicles/</value>
-  </entry>
-  <entry>
-    <key>reserve_api</key>
-    <value>https://arz-api-reserve.s-amp.com</value>
-  </entry>
-  <entry>
-    <key>cdn_LOGOTYPE_ARIZONA_URI</key>
-    <value>https://pc.az-ins.com/resource/image/project_icons/</value>
-  </entry>
-  <entry>
-    <key>cdn_ROD_REWARD_BATTLEPASS_URL</key>
-    <value>https://rodina.gtasounds.com/training/image/</value>
+    <key>reserve_arizona_news</key>
+    <value>https://raw.githubusercontent.com/idmkdev/arzmod-patcher/refs/heads/main/configs/</value>
   </entry>
   <entry>
     <key>main_channel_arizona</key>
     <value>https://download.arzmod.com/arz_modclient</value>
   </entry>
   <entry>
-    <key>reserve_channel_rodina</key>
-    <value>https://radarebot.hhos.net/rod_modclient</value>
+    <key>main_channel_rodina</key>
+    <value>https://download.arzmod.com/rod_modclient</value>
   </entry>
   <entry>
     <key>reserve_channel_arizona</key>
     <value>https://radarebot.hhos.net/arz_modclient</value>
   </entry>
   <entry>
-    <key>cdn_QUEST_ARIZONA_PICASSO</key>
-    <value>https://arizona.gtasounds.com/image_quest/</value>
+    <key>reserve_channel_rodina</key>
+    <value>https://radarebot.hhos.net/rod_modclient</value>
   </entry>
   <entry>
-    <key>cdn_ARIZONA_RESOURCE_IMAGE_DONATE</key>
-    <value>https://pc.az-ins.com/resource/image/donate/</value>
+    <key>cdn_NEWS_AUTH_BASE_URL</key>
+    <value>https://api-samp.arizona-five.com/</value>
   </entry>
   <entry>
-    <key>cdn_QUEST_RODINA_PICASSO</key>
-    <value>https://pc.rod-ins.com/resource/frontend/quest/</value>
-  </entry>
-  <entry>
-    <key>cdn_LOGOTYPE_RODINA_URI</key>
-    <value>https://pc.rod-ins.com/resource/image/project_icons/</value>
+    <key>cdn_RESERVE_NEWS_AUTH_BASE_URL</key>
+    <value>https://arz-api-samp-reserve.s-amp.com/</value>
   </entry>
   <entry>
     <key>cdn_SPOTIFY_BASE_URL</key>
     <value>https://soundpanel.gtasounds.com/</value>
   </entry>
   <entry>
-    <key>cdn_BATTLEPASS_ARIZONA_SOUND_IMAGE</key>
-    <value>https://arizona.gtasounds.com/battle_pass_sound/image/</value>
-  </entry>
-  <entry>
-    <key>cdn_BATTLEPASS_ARIZONA_NEWBIE_BASE_URL</key>
-    <value>https://arizona.gtasounds.com/battle_pass_sound/json/</value>
-  </entry>
-  <entry>
-    <key>cdn_BATTLEPASS_2025_ARIZONA_PICASSO</key>
-    <value>https://pc-cdn-az-ins.dev.arizona.games/battle_pass_sound/image_march_2025/</value>
-  </entry>
-  <entry>
-    <key>main_channel_rodina</key>
-    <value>https://download.arzmod.com/rod_modclient</value>
-  </entry>
-  <entry>
-    <key>cdn_BANNERS_ARIZONA_PICASSO_URL</key>
-    <value>https://pc.az-ins.com/resource/frontend/banner/</value>
-  </entry>
-  <entry>
-    <key>cdn_HUD_BASE_URL</key>
-    <value>https://arizona-ping.react-group.tech/</value>
-  </entry>
-  <entry>
-    <key>cdn_HINTS_PICASSO_URL</key>
-    <value>https://arizona.gtasounds.com/quest_notify/</value>
-  </entry>
-  <entry>
-    <key>cdn_BATTLEPASS_RODINA_ITEMS</key>
-    <value>https://rodina.gtasounds.com/battlepass/items/</value>
-  </entry>
-  <entry>
-    <key>cdn_BATTLEPASS_RODINA_NEWBIE_BASE_URL</key>
-    <value>https://rodina.gtasounds.com/battlepass/</value>
-  </entry>
-  <entry>
-    <key>cdn_BATTLEPASS_RODINA_SOUND_RENDERS</key>
-    <value>https://rodina.gtasounds.com/renders/</value>
-  </entry>
-  <entry>
-    <key>cdn_RODINA_URL_SKINS</key>
-    <value>https://pc.rod-ins.com/resource/inventory/skins/512/</value>
-  </entry>
-  <entry>
-    <key>cdn_ARIZONA_RESOURCE_URL</key>
-    <value>https://mob.maz-ins.com/resource/</value>
+    <key>launcher_DONATE_SHOP_ARIZONA</key>
+    <value>https://arizona-rp.com/shop</value>
   </entry>
   <entry>
     <key>launcher_DONATE_SHOP_RODINA</key>
     <value>https://rodina-rp.com/shop</value>
   </entry>
   <entry>
-    <key>cdn_ANIMATION_PICASSO_URL</key>
-    <value>https://pc.rod-ins.com/resource/frontend/animation/img/animations/</value>
+    <key>main_api</key>
+    <value>https://api.arizona-five.com</value>
   </entry>
   <entry>
-    <key>cdn_REWARDS_DECEMBER_CALENDAR</key>
-    <value>https://pc.az-ins.com/resource/image/december_calendar/</value>
+    <key>main_hud_ping</key>
+    <value>https://arizona-ping.react.group/</value>
   </entry>
   <entry>
-    <key>cdn_ROULETTE_POSSIBLE_AWARDS_RODINA_PICASSO</key>
-    <value>https://mob.azinternal.com/resource/frontend/models/256/</value>
+    <key>main_resource</key>
+    <value>https://cdn.azresources.cloud/</value>
+  </entry>
+  <entry>
+    <key>main_sound</key>
+    <value>https://cdn.azsounds.cloud/</value>
+  </entry>
+  <entry>
+    <key>reserve_api</key>
+    <value>https://arz-api-reserve.s-amp.com</value>
+  </entry>
+  <entry>
+    <key>reserve_hud_ping</key>
+    <value>https://arz-reserve.samp-dl.com/</value>
+  </entry>
+  <entry>
+    <key>reserve_resource</key>
+    <value>https://reserve-cdn.azresources.cloud/</value>
+  </entry>
+  <entry>
+    <key>reserve_server_api</key>
+    <value>https://reserve-server-api.arizona.games/</value>
+  </entry>
+  <entry>
+    <key>reserve_sound</key>
+    <value>https://reserve-cdn.azsounds.cloud/</value>
+  </entry>
+  <entry>
+    <key>server_api</key>
+    <value>https://server-api.arizona.games/</value>
   </entry>
 </defaults>

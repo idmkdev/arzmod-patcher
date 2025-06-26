@@ -31,6 +31,7 @@ import com.arizona.game.BuildConfig;
 import com.arizona.launcher.util.UtilsKt;
 import ru.mrlargha.commonui.core.UIElementID;
 import ru.mrlargha.commonui.elements.authorization.presentation.screen.RegistrationVideoBackground;
+import ru.mrlargha.commonui.utils.FirebaseConfigHelper;
 import androidx.preference.PreferenceManager;
 import org.json.JSONObject;
 import android.widget.TextView;
@@ -331,14 +332,14 @@ public class InitGamePatch {
             boolean isNewInterface = SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_NEW_INTERFACE);
             boolean isVersion21 = SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_VERSION_21);
             boolean isStreamerMode = SettingsPatch.getSettingsKeyValue(SettingsPatch.STREAMER_MODE);
-            String deviceInfo = Build.MANUFACTURER + ":" + Build.MODEL + ":" + getUniqueID();
+            String deviceInfo = Build.MANUFACTURER + ":" + Build.MODEL + ":" + getUniqueID() + ":notify_on";
             int lastUIElementID = UIElementID.getLastUIElementID();
 
             SharedPreferences sharedPreferences = SettingsPatch.getSettingsPreferences();
             String notifyHash = sharedPreferences.getString(SettingsPatch.TOKEN, getUniqueID());
 
             if(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0) == 1508) GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + formatVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)), lastUIElementID, deviceInfo, notifyHash);
-            else GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, isStreamerMode, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? formatVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : ACTUAL_VERSION), lastUIElementID, deviceInfo, notifyHash);
+            else GTASA.InitSetting(isNewInterface, isShowFps ? 1 : 0, isNewKeyboard, isStreamerMode, "(" + CONNECT_TAG + ") " + (isVersion21 ? "2.1" : "2.0") + " - " + (defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, BuildConfig.VERSION_CODE) != BuildConfig.VERSION_CODE ? formatVersion(defaultSharedPreferences.getInt(SettingsPatch.GAME_VERSION, 0)) : ACTUAL_VERSION), lastUIElementID, deviceInfo, notifyHash, FirebaseConfigHelper.INSTANCE.getChannelsState());
             
             
             FirebaseCrashlytics.getInstance().setUserId(getUniqueID());
@@ -389,11 +390,11 @@ public class InitGamePatch {
 
     public static void setAwaitText(RegistrationVideoBackground registrationVideoBackground, String text)
     {
-        if(text.equals("Подключились. Входим в игру...") && (SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 2 || isCustomServer())) hideVideo(registrationVideoBackground);
+        if(text.equals("Подключились. Входим в игру...") && (SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 2 || isCustomServer())) hideVideo(registrationVideoBackground, 2);
     }
 
-    public static void hideVideo(RegistrationVideoBackground registrationVideoBackground) {
-        if(SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 0) return;
+    public static void hideVideo(RegistrationVideoBackground registrationVideoBackground, int step) {
+        if(SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 0 || SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) != step) return;
         try {
             Field bindingField = registrationVideoBackground.getClass().getDeclaredField("videoBackgroundBinding");
             bindingField.setAccessible(true);

@@ -73,17 +73,20 @@ public class SettingsPatch {
 
     public static abstract class AbstractSetting {
         protected String title;
+        protected String description;
         protected String settingKey;
         protected SharedPreferences preferences;
         protected SettingChangeCallback callback;
 
-        public AbstractSetting(String title, String key, SharedPreferences prefs) {
+        public AbstractSetting(String title, String description, String key, SharedPreferences prefs) {
             this.title = title;
+            this.description = description;
             this.settingKey = key;
             this.preferences = prefs;
         }
 
         public String getTitle() { return title; }
+        public String getDescription() { return description; }
         public String getSettingKey() { return settingKey; }
         public void setCallback(SettingChangeCallback callback) { this.callback = callback; }
         
@@ -94,8 +97,8 @@ public class SettingsPatch {
     public static class BooleanSetting extends AbstractSetting {
         private boolean defaultValue;
 
-        public BooleanSetting(String title, String key, boolean defaultValue, SharedPreferences prefs) {
-            super(title, key, prefs);
+        public BooleanSetting(String title, String description, String key, boolean defaultValue, SharedPreferences prefs) {
+            super(title, description, key, prefs);
             this.defaultValue = defaultValue;
         }
 
@@ -109,32 +112,54 @@ public class SettingsPatch {
             LinearLayout layout = new LinearLayout(context);
             layout.setOrientation(LinearLayout.HORIZONTAL);
             layout.setPadding(20, 10, 20, 10);
+            layout.setGravity(Gravity.CENTER_VERTICAL);
+
+            float density = context.getResources().getDisplayMetrics().density;
+            int iconPadding = (int)(8 * density);
+
+            if (description != null && !description.trim().isEmpty()) {
+                ImageView infoIcon = new ImageView(context);
+                infoIcon.setImageResource(android.R.drawable.ic_dialog_info);
+                infoIcon.setPadding(0, 0, iconPadding, 0);
+                infoIcon.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                        builder.setTitle(title);
+                        builder.setMessage(createClickableLinksFromDescription(description, context));
+                        builder.setPositiveButton("OK", null);
+                        AlertDialog dialog = builder.create();
+                        dialog.show();
+                        TextView messageView = dialog.findViewById(android.R.id.message);
+                        if (messageView != null) {
+                            messageView.setMovementMethod(LinkMovementMethod.getInstance());
+                        }
+                    }
+                });
+                layout.addView(infoIcon);
+            }
 
             TextView titleView = new TextView(context);
             titleView.setText(title);
             titleView.setTextSize(16);
             titleView.setTextColor(Color.WHITE);
+            layout.addView(titleView);
+
+            View spacer = new View(context);
+            LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(0, 0, 1f);
+            spacer.setLayoutParams(spacerParams);
+            layout.addView(spacer);
 
             Switch switchView = new Switch(context);
             switchView.setChecked(getCurrentValue());
             int textColor = Color.WHITE;
             switchView.setTextColor(textColor);
-            
             try {
                 switchView.getThumbDrawable().setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.MULTIPLY);
                 switchView.getTrackDrawable().setColorFilter(Color.GRAY, android.graphics.PorterDuff.Mode.MULTIPLY);
             } catch (Exception e) {
                 Log.d("arzmod-settings-module", "Cannot set switch colors: " + e.getMessage());
             }
-            
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            params.weight = 1;
-            titleView.setLayoutParams(params);
-            
-            layout.addView(titleView);
             layout.addView(switchView);
 
             switchView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -160,8 +185,8 @@ public class SettingsPatch {
         private int defaultValue;
         private Map<Integer, String> values;
 
-        public SelectableValueSetting(String title, String key, int defaultValue, Map<Integer, String> values, SharedPreferences prefs) {
-            super(title, key, prefs);
+        public SelectableValueSetting(String title, String description, String key, int defaultValue, Map<Integer, String> values, SharedPreferences prefs) {
+            super(title, description, key, prefs);
             this.defaultValue = defaultValue;
             this.values = values;
         }
@@ -176,23 +201,52 @@ public class SettingsPatch {
             LinearLayout layout = new LinearLayout(context);
             layout.setOrientation(LinearLayout.HORIZONTAL);
             layout.setPadding(20, 10, 20, 10);
+            layout.setGravity(Gravity.CENTER_VERTICAL);
+
+            float density = context.getResources().getDisplayMetrics().density;
+            int iconPadding = (int)(8 * density);
+
+            if (description != null && !description.trim().isEmpty()) {
+                ImageView infoIcon = new ImageView(context);
+                infoIcon.setImageResource(android.R.drawable.ic_dialog_info);
+                infoIcon.setPadding(0, 0, iconPadding, 0);
+                infoIcon.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                        builder.setTitle(title);
+                        builder.setMessage(createClickableLinksFromDescription(description, context));
+                        builder.setPositiveButton("OK", null);
+                        AlertDialog dialog = builder.create();
+                        dialog.show();
+                        TextView messageView = dialog.findViewById(android.R.id.message);
+                        if (messageView != null) {
+                            messageView.setMovementMethod(LinkMovementMethod.getInstance());
+                        }
+                    }
+                });
+                layout.addView(infoIcon);
+            }
 
             TextView titleView = new TextView(context);
             titleView.setText(title);
             titleView.setTextSize(16);
             titleView.setTextColor(Color.WHITE);
-            
-            LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            titleParams.weight = 1;
-            titleParams.gravity = Gravity.CENTER_VERTICAL;
-            titleView.setLayoutParams(titleParams);
-            
+            layout.addView(titleView);
+
+            View spacer = new View(context);
+            LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(0, 0, 1f);
+            spacer.setLayoutParams(spacerParams);
+            layout.addView(spacer);
+
+            List<Integer> sortedKeys = new ArrayList<>(values.keySet());
+            java.util.Collections.sort(sortedKeys, java.util.Collections.reverseOrder());
+            List<String> valuesList = new ArrayList<>();
+            for (Integer key : sortedKeys) {
+                valuesList.add(values.get(key));
+            }
+
             Spinner spinner = new Spinner(context);
-            List<String> valuesList = new ArrayList<>(values.values());
-            
             ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, valuesList) {
                 @Override
                 public View getView(int position, View convertView, ViewGroup parent) {
@@ -212,7 +266,6 @@ public class SettingsPatch {
                     return view;
                 }
             };
-            
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spinner.setAdapter(adapter);
             spinner.setPopupBackgroundResource(com.miami.game.core.drawable.resources.R.drawable.bg_arizona);
@@ -224,8 +277,9 @@ public class SettingsPatch {
             spinnerParams.gravity = Gravity.CENTER_VERTICAL;
             spinner.setLayoutParams(spinnerParams);
 
+
             int currentValue = getCurrentValue();
-            int position = valuesList.indexOf(values.get(currentValue));
+            int position = sortedKeys.indexOf(currentValue);
             if (position >= 0) {
                 spinner.setSelection(position);
             }
@@ -233,16 +287,8 @@ public class SettingsPatch {
             spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    String selectedValue = valuesList.get(position);
-                    int newKey = -1;
-                    for (Map.Entry<Integer, String> entry : values.entrySet()) {
-                        if (entry.getValue().equals(selectedValue)) {
-                            newKey = entry.getKey();
-                            break;
-                        }
-                    }
-                    
-                    if (newKey != -1 && newKey != getCurrentValue()) {
+                    int newKey = sortedKeys.get(position);
+                    if (newKey != getCurrentValue()) {
                         boolean canChange = true;
                         if (callback != null) {
                             canChange = callback.onSettingChange(settingKey, newKey, getCurrentValue());
@@ -250,7 +296,7 @@ public class SettingsPatch {
                         if (canChange) {
                             preferences.edit().putInt(settingKey, newKey).apply();
                         } else {
-                            int oldPosition = valuesList.indexOf(values.get(getCurrentValue()));
+                            int oldPosition = sortedKeys.indexOf(getCurrentValue());
                             spinner.setSelection(oldPosition);
                         }
                     }
@@ -260,7 +306,6 @@ public class SettingsPatch {
                 public void onNothingSelected(AdapterView<?> parent) {}
             });
 
-            layout.addView(titleView);
             layout.addView(spinner);
             return layout;
         }
@@ -278,7 +323,7 @@ public class SettingsPatch {
         private AlertDialog editDialog;
 
         public ChatPositionSetting(String title, String key, SharedPreferences prefs) {
-            super(title, key, prefs);
+            super(title, null, key, prefs);
             currentX = prefs.getFloat(CHAT_POSITION_X, DEFAULT_X);
             currentY = prefs.getFloat(CHAT_POSITION_Y, DEFAULT_Y);
         }
@@ -519,23 +564,47 @@ public class SettingsPatch {
             LinearLayout layout = new LinearLayout(context);
             layout.setOrientation(LinearLayout.HORIZONTAL);
             layout.setPadding(20, 10, 20, 10);
+            layout.setGravity(Gravity.CENTER_VERTICAL);
+
+            float density = context.getResources().getDisplayMetrics().density;
+            int iconPadding = (int)(8 * density);
+
+
+            if (description != null && !description.trim().isEmpty()) {
+                ImageView infoIcon = new ImageView(context);
+                infoIcon.setImageResource(android.R.drawable.ic_dialog_info);
+                infoIcon.setPadding(0, 0, iconPadding, 0);
+                infoIcon.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                        builder.setTitle(title);
+                        builder.setMessage(createClickableLinksFromDescription(description, context));
+                        builder.setPositiveButton("OK", null);
+                        AlertDialog dialog = builder.create();
+                        dialog.show();
+                        TextView messageView = dialog.findViewById(android.R.id.message);
+                        if (messageView != null) {
+                            messageView.setMovementMethod(LinkMovementMethod.getInstance());
+                        }
+                    }
+                });
+                layout.addView(infoIcon);
+            }
 
             TextView titleView = new TextView(context);
             titleView.setText(title);
             titleView.setTextSize(16);
             titleView.setTextColor(Color.WHITE);
+            layout.addView(titleView);
+
+            View spacer = new View(context);
+            LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(0, 0, 1f);
+            spacer.setLayoutParams(spacerParams);
+            layout.addView(spacer);
 
             Switch switchView = new Switch(context);
             switchView.setChecked(getCurrentValue());
-            
-            LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            titleParams.weight = 1;
-            titleView.setLayoutParams(titleParams);
-
-            layout.addView(titleView);
             layout.addView(switchView);
 
             switchView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -629,33 +698,41 @@ public class SettingsPatch {
         List<AbstractSetting> settingsList = new ArrayList<>();
         String cpu = Build.CPU_ABI;
 
-        settingsList.add(new BooleanSetting("MonetLoader & AML (LUA & CLEO Загрузчик)", MONETLOADER_WORK, true, sharedPreferences));
+        context = AppContext.getContext();
+        if (context == null) {
+            Log.e("arzmod-settings-module", "Context is null (getSettingsList)");
+            return null;
+        }
+
+        String packageName = context.getPackageName();
+
+        settingsList.add(new BooleanSetting("MonetLoader & AML (LUA & CLEO Загрузчик)", "Включает основной функционал лаунчера - поддержка Lua, CLEO, AML. Если вы испытываете проблемы с работой игры (краш, фризы) попробуйте отключить данную функцию", MONETLOADER_WORK, true, sharedPreferences));
 
         if (!cpu.equals("arm64-v8a")) {
-            settingsList.add(new BooleanSetting("Новая клавиатура", IS_NEW_KEYBOARD, true, sharedPreferences));
-            settingsList.add(new BooleanSetting("Новый интерфейс", IS_NEW_INTERFACE, true, sharedPreferences));
+            settingsList.add(new BooleanSetting("Новая клавиатура", "Включает Android клавиатуру, при отключении будет использоваться стандартная SA:MP Mobile клавиатура", IS_NEW_KEYBOARD, true, sharedPreferences));
+            settingsList.add(new BooleanSetting("Новый интерфейс", "Включает новый интерфейс, диалоги станут на Java интерфейсе, кнопки под картой также.\nПри отключении под картой будут ESC, ALT (они сломаны разработчиками аризоны, фикс - https://t.me/tglangera/764), а диалоги станут стандартными из SA:MP Mobile", IS_NEW_INTERFACE, true, sharedPreferences));
         }
     
-        settingsList.add(new BooleanSetting("Очистка неиспольуемых файлов", IS_CLEAR_MODE, false, sharedPreferences));
-        settingsList.add(new BooleanSetting("Режим копирования сборки", IS_MODS_MODE, false, sharedPreferences));
-        settingsList.add(new BooleanSetting("Эмуляция лаунчера 2.1", IS_VERSION_21, false, sharedPreferences));
-        settingsList.add(new BooleanSetting("Проверка обновлений кеша игры", IS_MODE_MODS, true, sharedPreferences));
-        settingsList.add(new BooleanSetting("Свободная кнопка запуска", IS_FREE_LAUNCH, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Очистка неиспольуемых файлов", "Данная функция очищает все файлы которые не нужны игре!\nФункция затрагивает только файлы в папке Android/data/"+packageName+"/files и удаляет все файлы необычные файлы\nЭта функция поможет вам удалить остатки сборки после удаления её из Android/media/"+packageName+"/files", IS_CLEAR_MODE, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Режим копирования сборки", "С помощью этой функции вы сможете копировать свою сборку с Android/media/"+packageName+"/files в Android/data/"+packageName+"/files.\nЧтобы удалить сборку используйте функции проверки файлов, и включите функцию очистки неиспользуемых файлов, для очистки остатков.", IS_MODS_MODE, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Эмуляция лаунчера 2.1", "Глобально ничего не меняет, включает новый инвентарь и запрещает ставить стандартный худ", IS_VERSION_21, false, sharedPreferences));
+        settingsList.add(new BooleanSetting("Проверка обновлений кеша игры", "При отключении данной функции, лаунчер не будет проверять обновления кеша игры", IS_MODE_MODS, true, sharedPreferences));
+        settingsList.add(new BooleanSetting("Свободная кнопка запуска", "Данная функция позовляет запустить игру во время проверки обновления", IS_FREE_LAUNCH, false, sharedPreferences));
 
         if (!cpu.equals("arm64-v8a")) {
             settingsList.add(new ChatPositionSetting("Позиция чата", CHAT_POSITION_ENABLED, sharedPreferences));
-            settingsList.add(new BooleanSetting("Скрытие строки версии", IS_VERSION_HIDED, false, sharedPreferences));
+            settingsList.add(new BooleanSetting("Скрытие строки версии", "Скрывает строку версии в игре. Доступен также публичный метод, который позволяет вписать свою строку (найдите скрипт в t.me/cleodis)", IS_VERSION_HIDED, false, sharedPreferences));
         }
 
         if(BuildConfig.GIT_BUILD)
         {
-            settingsList.add(new BooleanSetting("[GIT] Не перезаписывать модифицированные файлы", IS_SKIP_VERIFY, false, sharedPreferences));
+            settingsList.add(new BooleanSetting("[GIT] Не перезаписывать модифицированные файлы", "Не перезаписывает ваши файлы если для них есть замена с локальных файлов GitHub\nНапример, если вы изменяете auth_video.mp4, чтобы оно не перезаписывалось, включите эту функцию.\nОбратите внимание, что при обновлении лаунчера с GitHub эту функцию стоит держать первое время включенной", IS_SKIP_VERIFY, false, sharedPreferences));
         }
 
-        settingsList.add(new SelectableValueSetting("Скрывать видео загрузки", VIDEO_HIDE_STEP, 0, MapsKt.mapOf(TuplesKt.to(0, "Не скрывать"), TuplesKt.to(1, "Сразу"), TuplesKt.to(2, "При подключении")), sharedPreferences));
+        settingsList.add(new SelectableValueSetting("Скрывать видео загрузки", "Скрывает видео загрузки. Функция работает вне от значения настройки при заходе на кастомный сервер.", VIDEO_HIDE_STEP, 0, MapsKt.mapOf(TuplesKt.to(0, "Не скрывать"), TuplesKt.to(1, "Сразу"), TuplesKt.to(2, "При подключении")), sharedPreferences));
         if (!cpu.equals("arm64-v8a")) {
-            settingsList.add(new SelectableValueSetting("Загрузчик модов", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), sharedPreferences));
-            settingsList.add(new SelectableValueSetting("Версия игры", GAME_VERSION, 0, GameVersions.getVersions(), sharedPreferences));
+            settingsList.add(new SelectableValueSetting("Загрузчик модов", "Альтернативное название - ModLoader", MODLOADER_STATE, 0, MapsKt.mapOf(TuplesKt.to(0, "Выкл"), TuplesKt.to(1, "Текстуры"), TuplesKt.to(2, "Вкл")), sharedPreferences));
+            settingsList.add(new SelectableValueSetting("Версия игры", "Если вы испытываете проблемы на текущей версии игры - выберите другую.\nНекоторые функции, такие как Скрытие строки версии и Позиция чата могут не работать на старых версиях", GAME_VERSION, 0, GameVersions.getVersions(), sharedPreferences));
         }
         return settingsList;
     }
@@ -730,34 +807,7 @@ public class SettingsPatch {
             setting.setCallback(new SettingChangeCallback() {
                 @Override
                 public boolean onSettingChange(String key, Object newValue, Object oldValue) {
-                    if (key.equals(IS_CLEAR_MODE)) {
-                        boolean isEnabled = (Boolean) newValue;
-                        if (isEnabled) {
-                            new AlertDialog.Builder(context)
-                                .setTitle("Очистка неиспользуемых файлов")
-                                .setMessage("Данная функция очищает все файлы которые не нужны игре!\nФункция затрагивает только файлы в папке Android/data/"+packageName+"/files и удаляет все файлы необычные файлы\nЭта функция поможет вам удалить остатки сборки после удаления её из Android/media/"+packageName+"/files")
-                                .setPositiveButton("OK", null)
-                                .show();
-                        }
-                    } else if (key.equals(IS_MODS_MODE)) {
-                        boolean isEnabled = (Boolean) newValue;
-                        if (isEnabled) {
-                            new AlertDialog.Builder(context)
-                                .setTitle("Режим копирования сборки")
-                                .setMessage("С помощью этой функции вы сможете копировать свою сборку с Android/media/"+packageName+"/files в Android/data/"+packageName+"/files.\nЧтобы удалить сборку используйте функции проверки файлов, и включите функцию очистки неиспользуемых файлов, для очистки остатков.")
-                                .setPositiveButton("OK", null)
-                                .show();
-                        }
-                    } else if (key.equals(IS_FREE_LAUNCH)) {
-                        boolean isEnabled = (Boolean) newValue;
-                        if (isEnabled) {
-                            new AlertDialog.Builder(context)
-                                .setTitle("Режим свободной кнопки запуска")
-                                .setMessage("Данная функция позовляет запустить игру во время проверки обновления")
-                                .setPositiveButton("OK", null)
-                                .show();
-                        }
-                    } else if (key.equals(IS_MODE_MODS)) {
+                    if (key.equals(IS_MODE_MODS)) {
                         boolean isEnabled = (Boolean) newValue;
                         if (isEnabled) {
                             new AlertDialog.Builder(context)
@@ -768,24 +818,6 @@ public class SettingsPatch {
                         } else {
                             UpdateServicePatch.setHomeUi(false);
                         }
-                    } else if (key.equals(IS_VERSION_21)) {
-                        boolean isEnabled = (Boolean) newValue;
-                        if (isEnabled) {
-                            new AlertDialog.Builder(context)
-                                .setTitle("Эмуляция лаунчера 2.1")
-                                .setMessage("Глобально ничего не меняет, включает новый инвентарь и запрещает ставить стандартный худ")
-                                .setPositiveButton("OK", null)
-                                .show();
-                        } 
-                    } else if (key.equals(IS_VERSION_HIDED)) {
-                        boolean isEnabled = (Boolean) newValue;
-                        if (isEnabled) {
-                            new AlertDialog.Builder(context)
-                                .setTitle("Скрытие строки версии")
-                                .setMessage("Скрывает строку версии в игре. Доступен также публичный метод, который позволяет вписать свою строку (найдите скрипт в t.me/cleodis)")
-                                .setPositiveButton("OK", null)
-                                .show();
-                        } 
                     } else if (key.equals(GAME_VERSION)) {
                         Integer choosenVersion = (Integer) newValue;
                         switch(choosenVersion) {
@@ -808,9 +840,16 @@ public class SettingsPatch {
                                     .setView(messageView)
                                     .setPositiveButton("OK", null)
                                     .show();
-                                return true;
                             }
                         }
+                        if(choosenVersion != BuildConfig.VERSION_CODE)
+                        {
+                            new AlertDialog.Builder(context)
+                                .setTitle("Устаревшая версия игры")
+                                .setMessage("Некоторые функции, такие как Скрытие строки версии и Позиция чата могут не работать на старых версиях. Если ваша игра вылетает, проверьте данные настройки")
+                                .setPositiveButton("OK", null)
+                                .show();
+                        } 
 
                     }
                     return true;
@@ -939,5 +978,30 @@ public class SettingsPatch {
 
         shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
         context.startActivity(Intent.createChooser(shareIntent, "Отправить логи"));
+    }
+
+    private static CharSequence createClickableLinksFromDescription(String description, Context context) {
+        if (description == null) return "";
+        SpannableString spannable = new SpannableString(description);
+        java.util.regex.Pattern urlPattern = java.util.regex.Pattern.compile("(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)");
+        java.util.regex.Matcher matcher = urlPattern.matcher(description);
+        while (matcher.find()) {
+            final String url = matcher.group(1);
+            int start = matcher.start(1);
+            int end = matcher.end(1);
+            spannable.setSpan(new ClickableSpan() {
+                @Override
+                public void onClick(View widget) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    context.startActivity(intent);
+                }
+                @Override
+                public void updateDrawState(TextPaint ds) {
+                    ds.setColor(Color.CYAN);
+                    ds.setUnderlineText(true);
+                }
+            }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return spannable;
     }
 }
