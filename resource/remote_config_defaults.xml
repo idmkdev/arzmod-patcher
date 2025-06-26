@@ -1,55 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?><defaults>
   <entry>
     <key>main_arizona_news</key>
-    <value>https://api.arzmod.com/</value>
+    <value>https://api.arzmod.com</value>
   </entry>
   <entry>
     <key>reserve_arizona_news</key>
-    <value>https://raw.githubusercontent.com/idmkdev/arzmod-patcher/refs/heads/main/configs/</value>
+    <value>https://raw.githubusercontent.com/idmkdev/arzmod-patcher/refs/heads/main/configs</value>
   </entry>
   <entry>
-    <key>main_channel_arizona</key>
-    <value>https://download.arzmod.com/arz_modclient</value>
-  </entry>
-  <entry>
-    <key>main_channel_rodina</key>
-    <value>https://download.arzmod.com/rod_modclient</value>
-  </entry>
-  <entry>
-    <key>reserve_channel_arizona</key>
-    <value>https://radarebot.hhos.net/arz_modclient</value>
-  </entry>
-  <entry>
-    <key>reserve_channel_rodina</key>
-    <value>https://radarebot.hhos.net/rod_modclient</value>
-  </entry>
-  <entry>
-    <key>cdn_NEWS_AUTH_BASE_URL</key>
-    <value>https://api-samp.arizona-five.com/</value>
-  </entry>
-  <entry>
-    <key>cdn_RESERVE_NEWS_AUTH_BASE_URL</key>
-    <value>https://arz-api-samp-reserve.s-amp.com/</value>
-  </entry>
-  <entry>
-    <key>cdn_SPOTIFY_BASE_URL</key>
-    <value>https://soundpanel.gtasounds.com/</value>
-  </entry>
-  <entry>
-    <key>launcher_DONATE_SHOP_ARIZONA</key>
-    <value>https://arizona-rp.com/shop</value>
-  </entry>
-  <entry>
-    <key>launcher_DONATE_SHOP_RODINA</key>
-    <value>https://rodina-rp.com/shop</value>
-  </entry>
-  <entry>
-    <key>main_api</key>
-    <value>https://api.arizona-five.com</value>
-  </entry>
-  <entry>
-    <key>main_hud_ping</key>
-    <value>https://arizona-ping.react.group/</value>
+    <key>reserve_server_api</key>
+    <value>https://reserve-server-api.arizona.games/</value>
   </entry>
   <entry>
     <key>main_resource</key>
@@ -60,27 +20,67 @@
     <value>https://cdn.azsounds.cloud/</value>
   </entry>
   <entry>
-    <key>reserve_api</key>
-    <value>https://arz-api-reserve.s-amp.com</value>
+    <key>cdn_NEWS_AUTH_BASE_URL</key>
+    <value>https://api-samp.arizona-five.com/</value>
   </entry>
   <entry>
-    <key>reserve_hud_ping</key>
-    <value>https://arz-reserve.samp-dl.com/</value>
+    <key>launcher_DONATE_SHOP_ARIZONA</key>
+    <value>https://arizona-rp.com/shop</value>
   </entry>
   <entry>
-    <key>reserve_resource</key>
-    <value>https://reserve-cdn.azresources.cloud/</value>
-  </entry>
-  <entry>
-    <key>reserve_server_api</key>
-    <value>https://reserve-server-api.arizona.games/</value>
+    <key>main_api</key>
+    <value>https://api.arizona-five.com</value>
   </entry>
   <entry>
     <key>reserve_sound</key>
     <value>https://reserve-cdn.azsounds.cloud/</value>
   </entry>
   <entry>
+    <key>reserve_api</key>
+    <value>https://arz-api-reserve.s-amp.com</value>
+  </entry>
+  <entry>
+    <key>main_channel_arizona</key>
+    <value>https://download.arzmod.com/arz_modclient</value>
+  </entry>
+  <entry>
+    <key>reserve_channel_rodina</key>
+    <value>https://radarebot.hhos.net/rod_modclient</value>
+  </entry>
+  <entry>
+    <key>reserve_channel_arizona</key>
+    <value>https://radarebot.hhos.net/arz_modclient</value>
+  </entry>
+  <entry>
+    <key>main_hud_ping</key>
+    <value>https://arizona-ping.react.group/</value>
+  </entry>
+  <entry>
+    <key>reserve_hud_ping</key>
+    <value>https://arz-reserve.samp-dl.com/</value>
+  </entry>
+  <entry>
+    <key>cdn_SPOTIFY_BASE_URL</key>
+    <value>https://soundpanel.gtasounds.com/</value>
+  </entry>
+  <entry>
+    <key>cdn_RESERVE_NEWS_AUTH_BASE_URL</key>
+    <value>https://arz-api-samp-reserve.s-amp.com/</value>
+  </entry>
+  <entry>
     <key>server_api</key>
     <value>https://server-api.arizona.games/</value>
+  </entry>
+  <entry>
+    <key>main_channel_rodina</key>
+    <value>https://download.arzmod.com/rod_modclient</value>
+  </entry>
+  <entry>
+    <key>reserve_resource</key>
+    <value>https://reserve-cdn.azresources.cloud/</value>
+  </entry>
+  <entry>
+    <key>launcher_DONATE_SHOP_RODINA</key>
+    <value>https://rodina-rp.com/shop</value>
   </entry>
 </defaults>
