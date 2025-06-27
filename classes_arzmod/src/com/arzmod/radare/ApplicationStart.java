@@ -61,7 +61,7 @@ import java.util.Arrays;
 public class ApplicationStart {
     private static final long MIN_START_INTERVAL = 1000;
     private static final String BANNER_API_URL = "https://api.arzmod.com/banner?version="+ BuildConfig.VERSION_CODE;
-    private static final String BANNER_API_URL_FALLBACK = "https://raw.githubusercontent.com/idmkdev/arzmod-patcher/refs/heads/main/configs/banner";
+    private static final String BANNER_API_URL_FALLBACK = "https://raw.githubusercontent.com/" + BuildConfig.GIT_OWNER + "/" + BuildConfig.GIT_REPO + "/refs/heads/main/configs/banner";
     private static final String LAST_BANNER_ID_KEY = "last_banner_id";
     private static final int ANIMATION_DURATION = 300;
     private static final int CLOSE_BUTTON_SIZE = 40;
@@ -592,7 +592,6 @@ public class ApplicationStart {
                             });
                         } else {
                             Log.i("arzmod-app-module", "No update available. Your app version is latest.");
-                            return;
                         }
                     }
                 } catch (Exception e) {

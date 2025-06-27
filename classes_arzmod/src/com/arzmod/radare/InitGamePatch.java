@@ -390,11 +390,11 @@ public class InitGamePatch {
 
     public static void setAwaitText(RegistrationVideoBackground registrationVideoBackground, String text)
     {
-        if(text.equals("Подключились. Входим в игру...") && (SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 2 || isCustomServer())) hideVideo(registrationVideoBackground, 2);
+        if(text.equals("Подключились. Входим в игру...") && (SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 2 || isCustomServer())) hideVideo(registrationVideoBackground, 999);
     }
 
     public static void hideVideo(RegistrationVideoBackground registrationVideoBackground, int step) {
-        if(SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 0 || SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) != step) return;
+        if((SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) == 0 || SettingsPatch.getSettingsKeyInt(SettingsPatch.VIDEO_HIDE_STEP) != step) && step != 999) return;
         try {
             Field bindingField = registrationVideoBackground.getClass().getDeclaredField("videoBackgroundBinding");
             bindingField.setAccessible(true);
