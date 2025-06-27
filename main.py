@@ -1030,6 +1030,11 @@ def arzmod_patch():
 	
 	search_and_replace(miami_path + "/com/miami/game/feature/settings/ui/model/SettingsUiState$Companion.smali", "https://vk.com/agm_workshop", "https://t.me/cleodis" if arzmodbuild else f"https://github.com/{repo_owner}/{repo_name}/issues")
 	delete_line_after(src_path + "/com/arizona/launcher/MainEntrench.smali", ".method protected onCreate(", "Landroid/widget/Toast;->show")
+
+
+	append_to_file(src_path + "/com/arizona/game/BuildConfig.smali", f".field public static final GIT_OWNER:Ljava/lang/String; = \"{repo_owner}\"")
+	append_to_file(src_path + "/com/arizona/game/BuildConfig.smali", f".field public static final GIT_REPO:Ljava/lang/String; = \"{repo_name}\"")
+
 	
 	if arzmodbuild:		
 		# TEXT PATCH
@@ -1144,7 +1149,6 @@ def arzmod_patch():
 		""")
 
 		append_to_file(src_path + "/com/arizona/game/BuildConfig.smali", ".field public static final GIT_BUILD:Z = true")
-		append_to_file(src_path + "/com/arizona/game/BuildConfig.smali", f".field public static final GIT_UPDATE_URL:Ljava/lang/String; = \"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest\"")
 
 		# ADD LOCAL FILES FROM ARZMOD AND COMFORTABLE USE ARIZONA FILESERVERS
 		localfiles = f"{working_dir}/localfiles"

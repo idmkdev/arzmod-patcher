@@ -350,11 +350,11 @@ public class SettingsPatch {
             ));
 
             TextView warningText = new TextView(context);
-            SpannableString warningMessage = new SpannableString("Позиции тут и в игре могут различаться. Для точной редакции установите скрипт t.me/cleodis");
+            SpannableString warningMessage = new SpannableString("Позиции тут и в игре могут различаться. Для точной редакции установите скрипт setchatposition.lua");
             ClickableSpan clickableSpan = new ClickableSpan() {
                 @Override
                 public void onClick(View widget) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/cleodis"));
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/" + BuildConfig.GIT_OWNER + "/" + BuildConfig.GIT_REPO + "/tree/main/configs/scripts/setchatposition.lua"));
                     context.startActivity(intent);
                 }
                 @Override
@@ -363,8 +363,8 @@ public class SettingsPatch {
                     ds.setUnderlineText(true);
                 }
             };
-            warningMessage.setSpan(clickableSpan, warningMessage.toString().indexOf("t.me/cleodis"), 
-                warningMessage.toString().indexOf("t.me/cleodis") + "t.me/cleodis".length(), 
+            warningMessage.setSpan(clickableSpan, warningMessage.toString().indexOf("setchatposition.lua"), 
+                warningMessage.toString().indexOf("setchatposition.lua") + "setchatposition.lua".length(), 
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             
             warningText.setText(warningMessage);
@@ -710,7 +710,7 @@ public class SettingsPatch {
 
         if (!cpu.equals("arm64-v8a")) {
             settingsList.add(new BooleanSetting("Новая клавиатура", "Включает Android клавиатуру, при отключении будет использоваться стандартная SA:MP Mobile клавиатура", IS_NEW_KEYBOARD, true, sharedPreferences));
-            settingsList.add(new BooleanSetting("Новый интерфейс", "Включает новый интерфейс, диалоги станут на Java интерфейсе, кнопки под картой также.\nПри отключении под картой будут ESC, ALT (они сломаны разработчиками аризоны, фикс - https://t.me/tglangera/764), а диалоги станут стандартными из SA:MP Mobile", IS_NEW_INTERFACE, true, sharedPreferences));
+            settingsList.add(new BooleanSetting("Новый интерфейс", "Включает новый интерфейс, диалоги станут на Java интерфейсе, кнопки под картой также.\nПри отключении под картой будут ESC, ALT (они сломаны разработчиками аризоны, фикс - https://t.me/tglangera/764 ), а диалоги станут стандартными из SA:MP Mobile", IS_NEW_INTERFACE, true, sharedPreferences));
         }
     
         settingsList.add(new BooleanSetting("Очистка неиспольуемых файлов", "Данная функция очищает все файлы которые не нужны игре!\nФункция затрагивает только файлы в папке Android/data/"+packageName+"/files и удаляет все файлы необычные файлы\nЭта функция поможет вам удалить остатки сборки после удаления её из Android/media/"+packageName+"/files", IS_CLEAR_MODE, false, sharedPreferences));
@@ -721,7 +721,7 @@ public class SettingsPatch {
 
         if (!cpu.equals("arm64-v8a")) {
             settingsList.add(new ChatPositionSetting("Позиция чата", CHAT_POSITION_ENABLED, sharedPreferences));
-            settingsList.add(new BooleanSetting("Скрытие строки версии", "Скрывает строку версии в игре. Доступен также публичный метод, который позволяет вписать свою строку (найдите скрипт в t.me/cleodis)", IS_VERSION_HIDED, false, sharedPreferences));
+            settingsList.add(new BooleanSetting("Скрытие строки версии", "Скрывает строку версии в игре. Доступен также публичный метод, который позволяет вписать свою строку (пример использования есть в скрипте https://github.com/" + BuildConfig.GIT_OWNER + "/" + BuildConfig.GIT_REPO + "/tree/main/configs/scripts/setversionstring.lua )", IS_VERSION_HIDED, false, sharedPreferences));
         }
 
         if(BuildConfig.GIT_BUILD)

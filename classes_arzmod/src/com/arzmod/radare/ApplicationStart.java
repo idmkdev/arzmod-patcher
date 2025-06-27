@@ -537,13 +537,7 @@ public class ApplicationStart {
             @Override
             public void run() {
                 try {
-                    String gitUpdateUrl = null;
-                    try {
-                        gitUpdateUrl = (String) BuildConfig.class.getField("GIT_UPDATE_URL").get(null);
-                    } catch (NoSuchFieldException | IllegalAccessException e) {
-                        Log.e("arzmod-app-module", "Why this method called but GIT_UPDATE_URL doesn't exists in BuildConfig?");
-                        return;
-                    }
+                    String gitUpdateUrl = "https://api.github.com/repos/" + BuildConfig.GIT_OWNER + "/" + BuildConfig.GIT_REPO + "/releases/latest";
 
                     if (gitUpdateUrl != null && !gitUpdateUrl.isEmpty()) {
                         URL url = new URL(gitUpdateUrl);
@@ -597,7 +591,7 @@ public class ApplicationStart {
                                 }
                             });
                         } else {
-                            Log.e("arzmod-app-module", "Why this method called but GIT_UPDATE_URL doesn't exists in BuildConfig?");
+                            Log.i("arzmod-app-module", "No update available. Your app version is latest.");
                             return;
                         }
                     }

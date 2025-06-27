@@ -67,7 +67,9 @@ jobs:
           if [ -z "${{ steps.get_commits.outputs.commits }}" ]; then
             echo "changelog=Изменений с последнего релиза нет." >> $GITHUB_OUTPUT
           else
-            echo "changelog=${{ steps.get_commits.outputs.commits }}" >> $GITHUB_OUTPUT
+            echo "changelog<<EOF" >> $GITHUB_OUTPUT
+            echo "${{ steps.get_commits.outputs.commits }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Git Tag
@@ -87,7 +89,6 @@ jobs:
           git tag -a "${{ steps.get_version.outputs.launcher_version }}" -m "$TAG_MESSAGE"
           git push origin "${{ steps.get_version.outputs.launcher_version }}"
           
-          # Сохраняем имя тега для возможного удаления при ошибке
           echo "tag_name=${{ steps.get_version.outputs.launcher_version }}" >> $GITHUB_OUTPUT
 
       - name: Set up Python
