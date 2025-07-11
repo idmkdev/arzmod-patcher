@@ -1529,8 +1529,6 @@ def install_game_libraries():
 		add_game_version("actual", 2)
 		if project == ARIZONA_MOBILE:
 			add_game_version(1601)
-			add_game_version(1579)
-		add_game_version(1508)
 
 		libsamppath = f"{app_dir}/lib/armeabi-v7a/libsamp.so"
 		nativeoffsetspath = f"{working_dir}/native/jni/offsets.h"
