@@ -1493,7 +1493,7 @@ def arzmod_patch():
 	search_and_replace(get_src_path(patchs_path, "/com/arizona/game/GTASA.smali"), ".method private native InitSetting(", ".method public static native InitSetting(") 
 
 	# SETTINGS PATCH + classes_arzmod/src/com/arzmod/radare/SettingsPatch.java
-	insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), ".method private static final onCreate$lambda$4", ".locals", """
+	insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), ".method static final onCreate$lambda$5", ".locals", """
 		new-instance v0, Lcom/arzmod/radare/UpdateServicePatch;
 		invoke-direct {v0}, Lcom/arzmod/radare/UpdateServicePatch;-><init>()V
 		invoke-virtual {v0}, Lcom/arzmod/radare/UpdateServicePatch;->deleteMods()V
