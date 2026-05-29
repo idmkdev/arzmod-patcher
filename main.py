@@ -1307,7 +1307,7 @@ def arzmod_patch():
 			.end method
 		""")
 		apply_function_to_files(search_and_replace, get_src_path(patchs_path, "/com/arizona/launcher/downloader"), r'invoke-virtual\s+\{([vp0-9]+),\s*([vp0-9]+)\},\s*Landroid/content/Context;->getExternalFilesDir\(Ljava/lang/String;\)Ljava/io/File;', r'invoke-static {\2}, Lcom/arizona/launcher/downloader/FilesChek;->getARZMODPatchedPath(Ljava/lang/String;)Ljava/io/File;', True, True)
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/downloader/FilesChek.smali"), "const-string v0, \"/local_manifest.json\"", f"const-string v0, \"/data/{package_name}/files/local_manifest.json\"")
+		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/downloader/FilesChek.smali"), "\"/local_manifest.json\"", f"\"/data/{package_name}/files/local_manifest.json\"")
 		replace_code_between_lines(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench$IncomingHandler.smali"), ".method static final handleMessage$lambda$0(Lcom/arizona/launcher/MainEntrench;)Lkotlin/Unit;", ".end method", """
 			.method static final handleMessage$lambda$0(Lcom/arizona/launcher/MainEntrench;)Lkotlin/Unit;
 				.locals 1
@@ -1414,39 +1414,39 @@ def arzmod_patch():
 		.end method
 	""")
 	replace_block_in_file(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), """
-		sget-object v7, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->INSTANCE:Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;
+		sget-object v6, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->INSTANCE:Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;
 
-		invoke-virtual {v7}, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->getSettingsData()Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;
+	    invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->getSettingsData()Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;
 
-		move-result-object v7
+	    move-result-object v6
 
-		invoke-virtual {v7}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
+	    invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
 
-		move-result-object v7
+	    move-result-object v6
 
-		const-string v9, "pass"
+	    const-string v8, "pass"
 
-		invoke-virtual {v6, v9, v7}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
+	    invoke-virtual {v5, v8, v6}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
 
-		move-result-object v6""", "")
+	    move-result-object v5""", "")
 	replace_block_in_file(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), """
 		invoke-direct {p0}, Lcom/arizona/launcher/MainEntrench;->getMainViewModel()Lcom/arizona/launcher/MainViewModel;
 
-		move-result-object v6
+	    move-result-object v5
 
-		invoke-virtual {v6}, Lcom/arizona/launcher/MainViewModel;->getPlayerNick()Ljava/lang/String;
+	    invoke-virtual {v5}, Lcom/arizona/launcher/MainViewModel;->getPlayerNick()Ljava/lang/String;
 
-		move-result-object v6""", 
+	    move-result-object v5""", 
 		"""
-		sget-object v6, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->INSTANCE:Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;
+		sget-object v5, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->INSTANCE:Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;
 
-		invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->getSettingsData()Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;
+		invoke-virtual {v5}, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->getSettingsData()Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;
 
-		move-result-object v6
+		move-result-object v5
 
-		invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
+		invoke-virtual {v5}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
 
-		move-result-object v6
+		move-result-object v5
 	""", ".method private final connectToTestServer")
 
 	ET.register_namespace("android", "http://schemas.android.com/apk/res/android")
