@@ -959,7 +959,12 @@ def set_xml_string(string_id, new_string):
 def download_file(url, filepath):
 	try:
 		print(f"Скачиваем файл: {url}")
-		response = requests.get(url, stream=True)
+		headers = {
+			'Cache-Control': 'no-cache, no-store, must-revalidate',
+			'Pragma': 'no-cache',
+			'Expires': '0'
+		}
+		response = requests.get(url + f"?t={int(time.time())}", stream=True, headers=headers)
 		response.raise_for_status()
 		total_size = int(response.headers.get('content-length', 0))
 		
@@ -1232,9 +1237,10 @@ def arzmod_patch():
 	if arzmodbuild:		
 		# TEXT PATCH
 		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench$IncomingHandler.smali"), r"\u0414\u0430\u043d\u043d\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u0430, \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e", r"\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435\u0020\u043a\u043b\u0438\u0435\u043d\u0442\u0430\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0020\u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f\u0020\u043e\u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0441\u044f\u0020\u0441\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u043c\u002c\u0020\u0447\u0442\u043e\u0431\u044b\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043d\u0435\u0020\u0431\u044b\u043b\u043e\u0020\u043b\u0438\u0448\u043d\u0438\u0445\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u043e\u0432\u002e\u0020\u041f\u0440\u043e\u0447\u0438\u0442\u0430\u0442\u044c\u0020\u043f\u043e\u0434\u0440\u043e\u0431\u043d\u043e\u0441\u0442\u0438\u0020\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f\u0020\u043c\u043e\u0436\u043d\u043e\u0020\u0432\u0020\u0074\u002e\u006d\u0065\u002f\u0043\u006c\u0065\u006f\u0041\u0072\u0069\u007a\u006f\u006e\u0061")
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench$IncomingHandler.smali"), r"\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0432\u0430\u0448\u0435 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0438 \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430", r"\u041b\u0430\u0443\u043d\u0447\u0435\u0440\u0443\u0020\u043d\u0435\u0020\u0443\u0434\u0430\u043b\u043e\u0441\u044c\u0020\u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c\u0020\u043d\u0443\u0436\u043d\u0443\u044e\u0020\u0435\u043c\u0443\u0020\u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u002c\u0020\u0441\u0435\u0440\u0432\u0435\u0440\u0430\u0020\u0041\u0052\u005a\u004d\u004f\u0044\u0020\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e\u0020\u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0020\u0415\u0441\u043b\u0438\u0020\u0441\u0020\u0432\u0430\u0448\u0435\u043c\u0020\u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0020\u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435\u043c\u0020\u0432\u0441\u0451\u0020\u0445\u043e\u0440\u043e\u0448\u043e\u0020\u0438\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0020\u043a\u0435\u0448\u0020\u0438\u0433\u0440\u044b\u002c\u0020\u043d\u0430\u0436\u043c\u0438\u0442\u0435\u0020\u043a\u043d\u043e\u043f\u043a\u0443\u0020\u0027\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c\u0027\u002e\u0020\u0020\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435\u0020\u043f\u0435\u0440\u0435\u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c\u0020\u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0020\u0438\u043b\u0438\u0020\u043f\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435\u0020\u043d\u0430\u0020\u006f\u0066\u0066\u006c\u0069\u006e\u0065\u0020\u0432\u0435\u0440\u0441\u0438\u044e\u0020\u043f\u043e\u0020\u043a\u043e\u043d\u0446\u0443\u0020\u043f\u043e\u0441\u0442\u0430\u0020\u0074\u002e\u006d\u0065\u002f\u0063\u006c\u0065\u006f\u0061\u0072\u0069\u007a\u006f\u006e\u0061\u002f\u0032\u0032\u0039\u002e\u0020\u0415\u0441\u043b\u0438\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043e\u0441\u0442\u0430\u043b\u0438\u0441\u044c\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u044b\u002c\u0020\u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435\u0020\u0432\u0020\u0433\u0440\u0443\u043f\u043f\u0443\u0020\u002d\u0020\u0074\u002e\u006d\u0065\u002f\u0063\u006c\u0065\u006f\u0064\u0069\u0073")
+		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), r"\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0432\u0430\u0448\u0435 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0438 \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430", r"\u041b\u0430\u0443\u043d\u0447\u0435\u0440\u0443\u0020\u043d\u0435\u0020\u0443\u0434\u0430\u043b\u043e\u0441\u044c\u0020\u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c\u0020\u043d\u0443\u0436\u043d\u0443\u044e\u0020\u0435\u043c\u0443\u0020\u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e\u002e\u0020\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u002c\u0020\u0441\u0435\u0440\u0432\u0435\u0440\u0430\u0020\u0041\u0052\u005a\u004d\u004f\u0044\u0020\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e\u0020\u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0020\u0415\u0441\u043b\u0438\u0020\u0441\u0020\u0432\u0430\u0448\u0435\u043c\u0020\u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0020\u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435\u043c\u0020\u0432\u0441\u0451\u0020\u0445\u043e\u0440\u043e\u0448\u043e\u0020\u0438\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0020\u043a\u0435\u0448\u0020\u0438\u0433\u0440\u044b\u002c\u0020\u043d\u0430\u0436\u043c\u0438\u0442\u0435\u0020\u043a\u043d\u043e\u043f\u043a\u0443\u0020\u0027\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c\u0027\u002e\u0020\u0020\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435\u0020\u043f\u0435\u0440\u0435\u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c\u0020\u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0020\u0438\u043b\u0438\u0020\u043f\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435\u0020\u043d\u0430\u0020\u006f\u0066\u0066\u006c\u0069\u006e\u0065\u0020\u0432\u0435\u0440\u0441\u0438\u044e\u0020\u043f\u043e\u0020\u043a\u043e\u043d\u0446\u0443\u0020\u043f\u043e\u0441\u0442\u0430\u0020\u0074\u002e\u006d\u0065\u002f\u0063\u006c\u0065\u006f\u0061\u0072\u0069\u007a\u006f\u006e\u0061\u002f\u0032\u0032\u0039\u002e\u0020\u0415\u0441\u043b\u0438\u0020\u0443\u0020\u0432\u0430\u0441\u0020\u043e\u0441\u0442\u0430\u043b\u0438\u0441\u044c\u0020\u0432\u043e\u043f\u0440\u043e\u0441\u044b\u002c\u0020\u043d\u0430\u043f\u0438\u0448\u0438\u0442\u0435\u0020\u0432\u0020\u0433\u0440\u0443\u043f\u043f\u0443\u0020\u002d\u0020\u0074\u002e\u006d\u0065\u002f\u0063\u006c\u0065\u006f\u0064\u0069\u0073")
 		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench$IncomingHandler.smali"), r"\u0412\u044b\u0439\u0442\u0438", r"\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c")
-	
+		set_xml_string("update_server_error_description", "Лаунчеру не удалось получить нужную ему информацию. Возможно, сервера ARZMOD временно недоступны Если с вашем интернет соединением всё хорошо и у вас установлен кеш игры, нажмите кнопку \\'Продолжить\\'.  Попробуйте перезагрузить телефон или перейдите на offline версию по концу поста t.me/cleoarizona/229. Если у вас остались вопросы, напишите в группу - t.me/cleodis")
+
 		# FIREBASE PATCH + classes_arzmod/src/com/arzmod/radare/FirebaseAdd.java (back arz connection)
 		replace_code_between_lines(get_src_path(patchs_path, "/com/arizona/launcher/MessagingService.smali"), "invoke-static {v0}, Landroidx/preference/PreferenceManager;->getDefaultSharedPreferences(Landroid/content/Context;)Landroid/content/SharedPreferences;", "invoke-interface {v0}, Landroid/content/SharedPreferences$Editor;->apply()V", "")
 		set_xml_string("gcm_defaultSenderId", "982519605362")
@@ -1258,8 +1264,8 @@ def arzmod_patch():
 		application = root.find("application")
 		application.append(service)
 		tree.write(manifest_path, encoding="utf-8", xml_declaration=True)
-		insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/MessagingService.smali"), ".method public onMessageReceived", "check-cast v1, Landroid/content/Context;", """
-			invoke-static {v1, p1}, Lcom/arzmod/radare/FirebaseAdd;->createNotification(Landroid/content/Context;Lcom/google/firebase/messaging/RemoteMessage;)V
+		insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/MessagingService.smali"), ".method public onMessageReceived", "check-cast v2, Landroid/content/Context;", """
+			invoke-static {v2, p1}, Lcom/arzmod/radare/FirebaseAdd;->createNotification(Landroid/content/Context;Lcom/google/firebase/messaging/RemoteMessage;)V
 			return-void
 		""")
 
@@ -1414,39 +1420,39 @@ def arzmod_patch():
 		.end method
 	""")
 	replace_block_in_file(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), """
-		sget-object v6, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->INSTANCE:Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;
+		sget-object v7, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->INSTANCE:Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;
 
-	    invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->getSettingsData()Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;
+	    invoke-virtual {v7}, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->getSettingsData()Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;
 
-	    move-result-object v6
+	    move-result-object v7
 
-	    invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
+	    invoke-virtual {v7}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
 
-	    move-result-object v6
+	    move-result-object v7
 
-	    const-string v8, "pass"
+	    const-string v9, "pass"
 
-	    invoke-virtual {v5, v8, v6}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
+	    invoke-virtual {v6, v9, v7}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
 
-	    move-result-object v5""", "")
+	    move-result-object v6""", "")
 	replace_block_in_file(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), """
 		invoke-direct {p0}, Lcom/arizona/launcher/MainEntrench;->getMainViewModel()Lcom/arizona/launcher/MainViewModel;
 
-	    move-result-object v5
+	    move-result-object v6
 
-	    invoke-virtual {v5}, Lcom/arizona/launcher/MainViewModel;->getPlayerNick()Ljava/lang/String;
+	    invoke-virtual {v6}, Lcom/arizona/launcher/MainViewModel;->getPlayerNick()Ljava/lang/String;
 
-	    move-result-object v5""", 
+	    move-result-object v6""", 
 		"""
-		sget-object v5, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->INSTANCE:Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;
+		sget-object v6, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->INSTANCE:Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;
 
-		invoke-virtual {v5}, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->getSettingsData()Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;
+		invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/ConnectionHolder;->getSettingsData()Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;
 
-		move-result-object v5
+		move-result-object v6
 
-		invoke-virtual {v5}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
+		invoke-virtual {v6}, Lcom/miami/game/feature/download/dialog/ui/connection/SettingsData;->getPassword()Ljava/lang/String;
 
-		move-result-object v5
+		move-result-object v6
 	""", ".method private final connectToTestServer")
 
 	ET.register_namespace("android", "http://schemas.android.com/apk/res/android")

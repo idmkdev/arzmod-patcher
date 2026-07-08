@@ -284,7 +284,13 @@ public class SettingsPatch {
             };
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spinner.setAdapter(adapter);
-            spinner.setPopupBackgroundResource(BuildConfig.IS_ARIZONA ? com.miami.game.core.drawable.resources.R.drawable.arizona_backgournd_home : com.miami.game.core.drawable.resources.R.drawable.rodina_backgournd_home);
+            try {
+                java.io.InputStream is = context.getAssets().open("background_home.webp");
+                Drawable backgroundDrawable = Drawable.createFromStream(is, null);
+                spinner.setPopupBackgroundDrawable(backgroundDrawable);
+            } catch (Throwable t) {
+                spinner.setPopupBackgroundResource(android.R.color.transparent);
+            }
 
             LinearLayout.LayoutParams spinnerParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1268,10 +1274,8 @@ public class SettingsPatch {
     public static class BackgroundBlur {
         public static Drawable getBlurredBackground(Activity activity, float radius) {
             try {
-                int resId = BuildConfig.IS_ARIZONA
-                    ? com.miami.game.core.drawable.resources.R.drawable.arizona_backgournd_home
-                    : com.miami.game.core.drawable.resources.R.drawable.rodina_backgournd_home;
-                Drawable base = activity.getResources().getDrawable(resId);
+                java.io.InputStream is = activity.getAssets().open("background_home.webp");
+                Drawable base = Drawable.createFromStream(is, null);
                 Bitmap bmp = drawableToBitmap(base);
                 Bitmap blurred = blurBitmap(activity, bmp, radius);
                 return new BitmapDrawable(activity.getResources(), blurred);
@@ -1282,10 +1286,8 @@ public class SettingsPatch {
 
         public static Drawable getBlurredBackgroundDarkened(Activity activity, float radius, float darkenAlpha) {
             try {
-                int resId = BuildConfig.IS_ARIZONA
-                    ? com.miami.game.core.drawable.resources.R.drawable.arizona_backgournd_home
-                    : com.miami.game.core.drawable.resources.R.drawable.rodina_backgournd_home;
-                Drawable base = activity.getResources().getDrawable(resId);
+                java.io.InputStream is = activity.getAssets().open("background_home.webp");
+                Drawable base = Drawable.createFromStream(is, null);
                 Bitmap bmp = drawableToBitmap(base);
                 Bitmap blurred = blurBitmap(activity, bmp, radius);
                 Bitmap out = blurred.copy(Bitmap.Config.ARGB_8888, true);
