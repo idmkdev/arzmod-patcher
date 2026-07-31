@@ -26,6 +26,16 @@ on:
         required: true
         type: boolean
         default: true
+      build_arizona_arzmod:
+        description: 'Собрать Arizona APK [ARZMOD]'
+        required: true
+        type: boolean
+        default: false
+      build_rodina_arzmod:
+        description: 'Собрать Rodina APK [ARZMOD]'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -257,6 +267,24 @@ jobs:
             ${{ inputs.build_rodina && './dist/app-rodina-x64-patched.apk' || '' }}
           draft: false
           prerelease: ${{ inputs.is_prerelease }}
+
+      - name: Setup ARZMOD Release Environment
+        if: inputs.build_arizona_arzmod || inputs.build_rodina_arzmod
+        run: |
+          pip install mysql-connector-python==8.0.29 pyTelegramBotAPI
+          echo "${{ secrets.ARZMOD_RELEASE_MODULE }}" | base64 -d > arzmod_release.py
+          echo "${{ secrets.ARZMOD_KEYSTORE_B64 }}" | base64 -d > key/keystore.jks
+
+
+      - name: Build Arizona APKs [ARZMOD]
+        if: inputs.build_arizona_arzmod
+        run: |
+          python main.py -actual -fullarm -release
+
+      - name: Build Rodina APKs [ARZMOD]
+        if: inputs.build_rodina_arzmod
+        run: |
+          python main.py -actual -rodina -fullarm -release
 
       - name: Set build status to success
         if: success() && github.event_name == 'workflow_dispatch'

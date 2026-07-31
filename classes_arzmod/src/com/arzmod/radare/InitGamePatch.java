@@ -384,6 +384,7 @@ public class InitGamePatch {
                     }
                 });
             }
+            AppAds.checkInitialization(false);
 
             GamePatches.onSetConnectState("Подключение к игре...");
             Log.d("arzmod-initgame-module", "game started. by ARZMOD (arzmod.com) & Community (t.me/cleodis)");

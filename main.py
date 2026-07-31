@@ -1459,29 +1459,60 @@ def arzmod_patch():
 	tree = ET.parse(manifest_path)
 	root = tree.getroot()
 	application = root.find('.//application')
-	
+
+	unity_activity_names = [
+		'com.unity3d.services.ads.adunit.AdUnitActivity',
+		'com.unity3d.services.ads.adunit.AdUnitTransparentActivity',
+		'com.unity3d.services.ads.adunit.AdUnitTransparentSoftwareActivity',
+		'com.unity3d.services.ads.adunit.AdUnitSoftwareActivity'
+	]
+
+	existing_activities = set()
+	for activity in application.findall('.//activity'):
+		activity_name = activity.attrib.get('{http://schemas.android.com/apk/res/android}name')
+		if activity_name:
+			existing_activities.add(activity_name)
+
+	for unity_activity_name in unity_activity_names:
+		if unity_activity_name not in existing_activities:
+			unity_activity = ET.SubElement(application, 'activity')
+			unity_activity.attrib['{http://schemas.android.com/apk/res/android}name'] = unity_activity_name
+			unity_activity.attrib['{http://schemas.android.com/apk/res/android}configChanges'] = 'fontScale|keyboard|keyboardHidden|locale|mnc|mcc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|touchscreen'
+
+			if 'Transparent' in unity_activity_name:
+				unity_activity.attrib['{http://schemas.android.com/apk/res/android}theme'] = '@android:style/Theme.Translucent.NoTitleBar.Fullscreen'
+			else:
+				unity_activity.attrib['{http://schemas.android.com/apk/res/android}theme'] = '@android:style/Theme.NoTitleBar.Fullscreen'
+
+			if 'Software' in unity_activity_name:
+				unity_activity.attrib['{http://schemas.android.com/apk/res/android}hardwareAccelerated'] = 'false'
+			else:
+				unity_activity.attrib['{http://schemas.android.com/apk/res/android}hardwareAccelerated'] = 'true'
+
+			print(f"Unity Ads activity добавлена: {unity_activity_name}")
+
 	main_entrench = None
 	for activity in application.findall('.//activity'):
 		activity_name = activity.attrib.get('{http://schemas.android.com/apk/res/android}name')
 		if activity_name and ('MainEntrench' in activity_name or 'com.arizona.launcher.MainEntrench' in activity_name):
 			main_entrench = activity
 			break
-	
+
 	if main_entrench is not None:
 		intent_filter = ET.SubElement(main_entrench, 'intent-filter')
-	
+
 		action = ET.SubElement(intent_filter, 'action')
 		action.attrib['{http://schemas.android.com/apk/res/android}name'] = 'android.intent.action.VIEW'
-	
+
 		category1 = ET.SubElement(intent_filter, 'category')
 		category1.attrib['{http://schemas.android.com/apk/res/android}name'] = 'android.intent.category.DEFAULT'
-		
+
 		category2 = ET.SubElement(intent_filter, 'category')
 		category2.attrib['{http://schemas.android.com/apk/res/android}name'] = 'android.intent.category.BROWSABLE'
-		
+
 		data = ET.SubElement(intent_filter, 'data')
 		data.attrib['{http://schemas.android.com/apk/res/android}scheme'] = 'samp' if project == ARIZONA_MOBILE else 'crmp'
-		
+
 		tree.write(manifest_path, encoding='utf-8', xml_declaration=True)
 		print("Intent-filter успешно добавлен")
 	else:
@@ -1489,6 +1520,9 @@ def arzmod_patch():
 		print("\nНайденные activity:")
 		for activity in application.findall('.//activity'):
 			print(activity.attrib.get('{http://schemas.android.com/apk/res/android}name'))
+
+
+
 	insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), ".method protected onCreate", "invoke-super {p0, p1}, Lcom/arizona/launcher/Hilt_MainEntrench;->onCreate(Landroid/os/Bundle;)V", """
 		new-instance v2, Lcom/arzmod/radare/ApplicationStart;
         invoke-direct {v2, p0}, Lcom/arzmod/radare/ApplicationStart;-><init>(Landroid/content/Context;)V

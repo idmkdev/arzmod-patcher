@@ -1026,7 +1026,7 @@ public class SettingsPatch {
                             AppAds.hideBanner();
                         } else {
                             Toast.makeText(activity, "Спасибо за поддержку! :>", Toast.LENGTH_SHORT).show();
-                            AppAds.initializeAndShow();
+                            AppAds.showBanner();
                         }
                     } 
                     return true;

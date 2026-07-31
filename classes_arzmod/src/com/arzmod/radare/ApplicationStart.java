@@ -283,7 +283,7 @@ public class ApplicationStart {
         }
 
         Toast.makeText(context, Build.CPU_ABI + " " + BuildConfig.VERSION_NAME + " " + (BuildConfig.GIT_BUILD  ? "arzmod_community" : "arzmod"), Toast.LENGTH_SHORT).show();
-        if(!SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_DEV_HUNGRY)) AppAds.initializeAndShow();
+        AppAds.checkInitialization(!SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_DEV_HUNGRY));
     }
 
     public static void showBanner() {

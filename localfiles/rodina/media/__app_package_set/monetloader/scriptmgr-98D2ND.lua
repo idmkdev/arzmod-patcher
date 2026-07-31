@@ -23,7 +23,7 @@
 
 -- script info
 script_name('Script Manager')
-script_version('2.0 ARZMOD')
+script_version('2.1 ARZMOD')
 script_version_number(2)
 script_author('The MonetLoader Team', 'ARZMOD')
 script_description('Script manager that opens on left swipe on radar and provides ability to manage scripts, view logs, execute Lua code in REPL-like mode and receive script notifications.')
@@ -38,6 +38,7 @@ local imgui = require('mimgui')
 local faicons = require('fAwesome6')
 local cfg = require('jsoncfg')
 local cjson = require("cjson")
+local memory = require("memory")
 local copas = require ('copas') -- for download scripts from url
 local http = require ('copas.http') -- for download scripts from url
 local gta = ffi.load('GTASA') -- for hook to open link
@@ -393,6 +394,179 @@ imgui.OnFrame(
   end
 )
 
+local locales = {
+    current = "ru",
+    data = {
+        en = {
+            yes = "Yes",
+            no = "No",
+            wv_serverfind = "Trying to find an available server...",
+            wv_progress = "[%d] Loading...",
+            wv_librequired = "The WebViews library is not loaded.\nMake sure you have the lib.android and lib.webviews libraries installed.",
+            scripts = "Scripts",
+            reload_all = "Reload all",
+            confirm_reload_all = "Confirm reload all",
+            sure_reload_all = "Are you sure you want to reload all scripts?",
+            reloaded_all = "Reloaded all scripts!",
+            scr_name = "Name: %s",
+            scr_filename = "File name: %s",
+            scr_path = "Path: %s",
+            scr_ver_sg = "Version: %s (%g)",
+            scr_ver_g = "Version: %g",
+            scr_ver_s = "Version: %s",
+            scr_authors = "Authors: %s",
+            scr_desc = "Description: %s",
+            unload = "Unload",
+            unloaded = "Unloaded",
+            reload = "Reload",
+            reloaded = "Reloaded",
+            disable = "Disable",
+            enable = "Enable",
+            delete = "Delete",
+            delete_script = "Delete script",
+            confirm_delete_script = "Are you sure you want to delete the script: %s?",
+            unloaded_and_deleted = "Unloaded and Deleted",
+            status_disabled = "Status: Disabled",
+            delete_disabled_script = "Delete disabled script",
+            confirm_delete_disabled_script = "Are you sure you want to permanently delete the disabled script: %s?",
+            deleted_permanently = "Deleted permanently",
+            select_any_script = "<<<\nSelect any script on the left!",
+            log = "Log",
+            find = "Find",
+            clear_history = "Clear history",
+            last_crashes = "Last crashes",
+            script_name = "Script name",
+            time_since_crash = "Time since crash",
+            actions = "Actions",
+            reload_failed = "Reload failed",
+            hide = "Hide",
+            shell = "Shell",
+            run = "Run",
+            up = "Up",
+            down = "Down",
+            clear = "Clear",
+            settings = "Settings",
+            crash_notifications = "Crash notifications",
+            script_message_notifications = "Script message notifications",
+            log_messages_count = "Log messages count",
+            last_crashes_count = "Last crashes count",
+            shell_history_count = "Shell history count",
+            mods_store = "Mods Store",
+            confirm_download = "Are you sure you want to download %s?",
+            confirm_reload_all_zip = "Are you want to reload all scripts?\n(the installed mod was in .zip and was not automatically loaded)",
+            confirm_delete = "Are you sure you want to delete %s?",
+            crashed = "Crashed",
+            confirm_suggestion = "You don't have any scripts installed. Would you like to browse the script store?",
+            skip_suggestion = "No, and don't offer it again.",
+            script_disabled = "Script disabled: %s",
+            failed_to_disable = "Failed to disable script: %s",
+            script_enabled = "Script enabled: %s",
+            failed_to_enable = "Failed to enable script: %s",
+            script_unloaded = "Script unloaded: %s",
+            script_not_found = "Script not found: %s"
+        },
+        ru = {
+          yes = "Да",
+            no = "Нет",
+            wv_serverfind = "Поиск доступного сервера...",
+            wv_progress = "[%d] Загрузка...",
+            wv_librequired = "Библиотека WebViews не загружена.\nУбедитесь, что у вас установлены библиотеки lib.android и lib.webviews.",
+            scripts = "Скрипты",
+            reload_all = "Перезагрузить все",
+            confirm_reload_all = "Подтверждение перезагрузки всех",
+            sure_reload_all = "Вы уверены, что хотите перезагрузить все скрипты?",
+            reloaded_all = "Все скрипты перезагружены!",
+            scr_name = "Имя: %s",
+            scr_filename = "Имя файла: %s",
+            scr_path = "Путь: %s",
+            scr_ver_sg = "Версия: %s (%g)",
+            scr_ver_g = "Версия: %g",
+            scr_ver_s = "Версия: %s",
+            scr_authors = "Авторы: %s",
+            scr_desc = "Описание: %s",
+            unload = "Выгрузить",
+            unloaded = "Выгружен",
+            reload = "Перезагрузить",
+            reloaded = "Перезагружен",
+            disable = "Отключить",
+            enable = "Включить",
+            delete = "Удалить",
+            delete_script = "Удалить скрипт",
+            confirm_delete_script = "Вы уверены, что хотите удалить скрипт: %s?",
+            unloaded_and_deleted = "Выгружен и удалён",
+            status_disabled = "Статус: Отключён",
+            delete_disabled_script = "Удалить отключённый скрипт",
+            confirm_delete_disabled_script = "Вы уверены, что хотите безвозвратно удалить отключённый скрипт: %s?",
+            deleted_permanently = "Удалён безвозвратно",
+            select_any_script = "<<<\nВыберите любой скрипт слева!",
+            log = "Лог",
+            find = "Найти",
+            clear_history = "Очистить историю",
+            last_crashes = "Последние сбои",
+            script_name = "Имя скрипта",
+            time_since_crash = "Время с момента сбоя",
+            actions = "Действия",
+            reload_failed = "Не удалось перезагрузить",
+            hide = "Скрыть",
+            shell = "Консоль",
+            run = "Выполнить",
+            up = "Вверх",
+            down = "Вниз",
+            clear = "Очистить",
+            settings = "Настройки",
+            crash_notifications = "Уведомления о сбоях",
+            script_message_notifications = "Уведомления о сообщениях скриптов",
+            log_messages_count = "Количество сообщений в логе",
+            last_crashes_count = "Количество последних сбоев",
+            shell_history_count = "Количество записей истории шелла",
+            mods_store = "Магазин модов",
+            confirm_download = "Вы уверены, что хотите скачать %s?",
+            confirm_reload_all_zip = "Хотите перезагрузить все скрипты?\n(установленный мод был в .zip и не был загружен автоматически)",
+            confirm_delete = "Вы уверены, что хотите удалить %s?",
+            crashed = "Произошёл сбой",
+            confirm_suggestion = "У вас не установлено ни одного скрипта. Хотите перейти в магазин скриптов?",
+            skip_suggestion = "Нет, и больше не предлагать.",
+            script_disabled = "Скрипт выключен: %s",
+            failed_to_disable = "Не удалось выключить скрипт: %s",
+            script_enabled = "Скрипт включён: %s",
+            failed_to_enable = "Не удалось включить скрипт: %s",
+            script_unloaded = "Скрипт выгружен: %s",
+            script_not_found = "Скрипт не найден: %s"
+        }
+    }
+}
+
+
+function locales.get(key, ...)
+    local lang_data = locales.data[locales.current]
+    local text = lang_data[key]
+    
+    if not text then
+        text = locales.data.en[key] or key
+    end
+   
+    if select("#", ...) > 0 then
+        return string.format(text, ...)
+    end
+    return text
+end
+
+function locales.set_lang(lang)
+    if locales.data[lang] then
+        locales.current = lang
+        return true
+    end
+    return false
+end
+
+function locales.get_languages()
+    local langs = {}
+    for lang, _ in pairs(locales.data) do
+        table.insert(langs, lang)
+    end
+    return langs
+end
+
 
 -- global vars
 
@@ -401,10 +575,12 @@ local wvWindow = {
   serverfind = false,
   created = false,
   visible = false,
+  force = false,
   progress = 0,
   position = {x = 0, y = 0, w = 0, h = 0},
   confirmDialog = {
-    text = "TEXT",
+    text = nil,
+    buttons = {locales.get("yes"), locales.get("no")},
     response = -1
   }
 }
@@ -415,7 +591,8 @@ local DEFAULT_CONFIG = { -- default config
   messagesCount = 100, -- count of saved messages
   lastCrashesCount = 10, -- count of saved crashed scripts
   shellHistoryCount = 50, -- count of saved shell history
-  scriptStoreZoom = 60, -- value of zoom on script store webview
+  currentLang = "ru",
+  skipSuggestion = false
 }
 
 local config = cfg.load(DEFAULT_CONFIG) -- simply config
@@ -441,8 +618,6 @@ local imScriptMessageNotifications = imgui.new.bool(config.scriptMessageNotifica
 local imMessagesCount = imgui.new.int(config.messagesCount)
 local imLastCrashesCount = imgui.new.int(config.lastCrashesCount)
 local imShellHistoryCount = imgui.new.int(config.shellHistoryCount)
-local imScriptStoreZoom = imgui.new.int(config.scriptStoreZoom)
-
 
 local scriptsSearchBuffer = imgui.new.char[128]() -- buffer for scripts search input
 local scriptsSearchText = '' -- scripts search input as lua string
@@ -492,8 +667,15 @@ end)
 imgui.OnFrame(
   function() return windowState[0] end,
   function(self)
+    if wvWindow.force then
+      local scrW, scrH = getScreenResolution()
+      local winW, winH = 530 * MONET_DPI_SCALE, 330 * MONET_DPI_SCALE
+      imgui.SetNextWindowPos(imgui.ImVec2((scrW - winW) / 2, (scrH - winH) / 2))
+  end
     imgui.SetNextWindowSize(imgui.ImVec2(530 * MONET_DPI_SCALE, 330 * MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
     imgui.Begin('Script Manager for MonetLoader v' .. script.this.version, windowState, imgui.WindowFlags.NoCollapse)
+
+    local start_langs_x, start_langs_y = imgui.GetCursorPos().x, imgui.GetCursorPos().y
 
     if wasInScriptStore then
       if wvWindow.created then
@@ -501,25 +683,8 @@ imgui.OnFrame(
         if wvWindow.position.h ~= imgui.GetWindowContentRegionMax().y or wvWindow.position.w ~= imgui.GetWindowContentRegionMax().x then wv.setSize(0, imgui.GetWindowContentRegionMax().x + imgui.GetCursorPos().x, imgui.GetWindowContentRegionMax().y-90) end
         wvWindow.position = {x = imgui.GetWindowPos().x, y = imgui.GetWindowPos().y, w = imgui.GetWindowContentRegionMax().x, h = imgui.GetWindowContentRegionMax().y}
       end
-      
-      if wvWindow.progress ~= 100 then
-        imgui.SetCursorPosX(imgui.GetWindowWidth()/2-250/2)
-        imgui.SetCursorPosY(imgui.GetWindowContentRegionMax().y/2) 
-        if isWebViewsLoaded then
-          imgui.SetCursorPosY(imgui.GetCursorPosY()-250/2.2) 
-          imgui.InfinitySpinner('loader', 250, 7, {1, 1, 1, 1}, {5, 5, 5, 0.1})
-          if wvWindow.serverfind then
-            imgui.SetCursorPosX(imgui.GetWindowWidth()/2-imgui.CalcTextSize("Trying to find an available server...").x/2)
-            imgui.Text("Trying to find an available server...")
-          else
-            imgui.SetCursorPosX(imgui.GetWindowWidth()/2-imgui.CalcTextSize("["..wvWindow.progress.."] Loading...").x/2)
-            imgui.Text("["..wvWindow.progress.."] Loading...")
-          end
-        else
-          imgui.SetCursorPosX(imgui.GetWindowWidth()/2-imgui.CalcTextSize("The WebViews library is not loaded.\nMake sure you have the lib.android and lib.webviews libraries installed.").x/2)
-          imgui.Text("The WebViews library is not loaded.\nMake sure you have the lib.android and lib.webviews libraries installed.")
-        end
-      elseif wvWindow.created and wvWindow.confirmDialog.response == 0 and isWebViewsLoaded then
+     
+      if wvWindow.created and wvWindow.confirmDialog.text ~= nil and isWebViewsLoaded then
         if wvWindow.visible then
           wv.setVisible(0, false)
           wvWindow.visible = false
@@ -527,23 +692,47 @@ imgui.OnFrame(
         imgui.SetCursorPosY(imgui.GetWindowSize().y / 3)
         imgui.SetCursorPosX(imgui.GetWindowWidth()/2-imgui.CalcTextSize(wvWindow.confirmDialog.text).x/2) 
         imgui.Text(wvWindow.confirmDialog.text)
-        imgui.SetCursorPosX((imgui.GetWindowWidth() - (imgui.CalcTextSize('Yes').x + imgui.CalcTextSize('No').x + imgui.GetStyle().FramePadding.x * 4 + imgui.GetStyle().ItemSpacing.x)) / 2)
-        if imgui.Button('Yes') then
-            wvWindow.confirmDialog.response = 1
-            wv.setVisible(0, true)
-            wvWindow.visible = true
+        local buttons = wvWindow.confirmDialog.buttons
+        local btn_width = imgui.CalcTextSize(wvWindow.confirmDialog.text).x + imgui.GetStyle().FramePadding.x * 2
+        
+        for i = 1, #buttons do
+            local text = buttons[i]
+            local window_width = imgui.GetWindowWidth()
+        
+            imgui.SetCursorPosX((window_width - btn_width) / 2)
+        
+            if imgui.Button(text, imgui.ImVec2(btn_width, 0)) then
+                wvWindow.confirmDialog.response = i
+                wvWindow.confirmDialog.text = nil
+                wvWindow.confirmDialog.buttons = {locales.get("yes"), locales.get("no")}
+                wv.setVisible(0, true)
+                wvWindow.visible = true
+            end
+        end 
+      elseif wvWindow.serverfind or wvWindow.progress < 100 then
+        imgui.SetCursorPosX(imgui.GetWindowWidth()/2-250/2)
+        imgui.SetCursorPosY(imgui.GetWindowContentRegionMax().y/2) 
+        if isWebViewsLoaded then
+          imgui.SetCursorPosY(imgui.GetCursorPosY()-250/2.2) 
+          imgui.InfinitySpinner('loader', 250, 7, {1, 1, 1, 1}, {5, 5, 5, 0.1})
+          if wvWindow.serverfind then
+            imgui.SetCursorPosX(imgui.GetWindowWidth()/2-imgui.CalcTextSize(locales.get("wv_serverfind")).x/2)
+            imgui.Text(locales.get("wv_serverfind"))
+          else
+            imgui.SetCursorPosX(imgui.GetWindowWidth()/2-imgui.CalcTextSize(locales.get("wv_progress", wvWindow.progress)).x/2)
+            imgui.Text(locales.get("wv_progress", wvWindow.progress))
           end
-          imgui.SameLine()
-          if imgui.Button('No') then
-            wvWindow.confirmDialog.response = 2
-            wv.setVisible(0, true)
-            wvWindow.visible = true
+          if wvWindow.created and wvWindow.visible then
+            wv.setVisible(0, false)
+            wvWindow.visible = false
           end
-      else
-        if wvWindow.created and not wvWindow.visible then
+        else
+          imgui.SetCursorPosX(imgui.GetWindowWidth()/2-imgui.CalcTextSize(locales.get("wv_librequired")).x/2)
+          imgui.Text(locales.get("wv_librequired"))
+        end
+      elseif  wvWindow.created and not wvWindow.visible  then
           wv.setVisible(0, true)
           wvWindow.visible = true
-        end
       end
       imgui.SetCursorPosY(imgui.GetWindowContentRegionMax().y-40) 
     end
@@ -553,25 +742,25 @@ imgui.OnFrame(
       local didShellRender = false
       local didScriptStoreRender = false
 
-      if imgui.BeginTabItem('Scripts') then -- common scripts control
-        if imgui.InputTextWithHint('##ScriptsSearch', 'Find...', scriptsSearchBuffer, ffi.sizeof(scriptsSearchBuffer)) then
+      if imgui.BeginTabItem(locales.get("scripts")) then -- common scripts control
+        if imgui.InputTextWithHint('##ScriptsSearch', locales.get("find") .. '...', scriptsSearchBuffer, ffi.sizeof(scriptsSearchBuffer)) then
           scriptsSearchText = ffi.string(scriptsSearchBuffer):lower()
         end
         imgui.SameLine()
-        if imgui.Button('Reload all') then
-          imgui.OpenPopup('Confirm reload all')
+        if imgui.Button(locales.get("reload_all")) then
+          imgui.OpenPopup(locales.get("confirm_reload_all"))
         end
 
-        if imgui.BeginPopupModal('Confirm reload all') then
-          imgui.Text('Are you sure you want to reload all scripts?')
+        if imgui.BeginPopupModal(locales.get("confirm_reload_all")) then
+          imgui.Text(locales.get("sure_reload_all"))
     
-          if imgui.Button('Yes', imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
+          if imgui.Button(locales.get("yes"), imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
             reloadScripts()
-            Notifications.Show('Reloaded all scripts!', Notifications.TYPE.OK)
+            Notifications.Show(locales.get("reloaded_all"), Notifications.TYPE.OK)
             imgui.CloseCurrentPopup()
           end
           imgui.SameLine()
-          if imgui.Button('No', imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
+          if imgui.Button(locales.get("no"), imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
             imgui.CloseCurrentPopup()
           end
     
@@ -619,29 +808,29 @@ imgui.OnFrame(
         end
         
         if scr ~= nil then
-          imgui.TextWrapped('Name: %s', scr.name)
+          imgui.TextWrapped(locales.get("scr_name", scr.name))
           if scr.filename ~= scr.name then
-            imgui.TextWrapped('File name: %s', scr.filename)
+            imgui.TextWrapped(locales.get("scr_filename", scr.filename))
           end
 
           local version = scr.version
           local version_num = scr.version_num
           if #version ~= 0 and version_num ~= 0 then
-            imgui.TextWrapped('Version: %s (%g)', version, version_num)
+            imgui.TextWrapped(locales.get("scr_ver_sg", version, version_num))
           elseif #version == 0 and version_num ~= 0 then
-            imgui.TextWrapped('Version: %g', version_num)
+            imgui.TextWrapped(locales.get("scr_ver_g", version_num))
           elseif #version ~= 0 and version_num == 0 then
-            imgui.TextWrapped('Version: %s', version)
+            imgui.TextWrapped(locales.get("scr_ver_s", version))
           end
 
           local authors = table.concat(scr.authors, ', ')
           if #authors ~= 0 then
-            imgui.TextWrapped('Authors: %s', authors)
+            imgui.TextWrapped(locales.get("scr_authors", authors))
           end
 
           local desc = scr.description
           if #desc ~= 0 then
-            imgui.TextWrapped('Description: %s', desc)
+            imgui.TextWrapped(locales.get("scr_desc", desc))
           end
 
           local url = scr.url
@@ -651,38 +840,37 @@ imgui.OnFrame(
             imgui.Link(addProtocolIfNeeded(url))
           end
 
-          if imgui.Button('Unload') then
+          if imgui.Button(locales.get("unload")) then
             scr:unload()
-            Notifications.Show(scr.name .. ':\nUnloaded!', Notifications.TYPE.OK)
+            Notifications.Show(scr.name .. ':\n' .. locales.get("unloaded") .. '!', Notifications.TYPE.OK)
           end
           imgui.SameLine()
-          if imgui.Button('Reload') then
+          if imgui.Button(locales.get("reload")) then
             scr:reload()
-            Notifications.Show(scr.name .. ':\nReloaded!', Notifications.TYPE.OK)
+            Notifications.Show(scr.name .. ':\n' .. locales.get("reloaded") .. '!', Notifications.TYPE.OK)
           end
-          imgui.SameLine()
-          if imgui.Button('Disable') then
+          if imgui.Button(locales.get("disable")) then
             if disableScript(scr.path) then
               scr:unload()
               selectedScriptId = -1
             end
           end
           imgui.SameLine()
-          if imgui.Button('Delete') then
-            imgui.OpenPopup('Delete script')
+          if imgui.Button(locales.get("delete")) then
+            imgui.OpenPopup(locales.get("delete_script"))
           end
 
-          if imgui.BeginPopupModal('Delete script') then
-            imgui.Text('Are you sure you want to delete the script: '..scr.name..'?')
+          if imgui.BeginPopupModal(locales.get("delete_script")) then
+            imgui.Text(locales.get("confirm_delete_script", scr.name))
     
-            if imgui.Button('Yes', imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
+            if imgui.Button(locales.get("yes"), imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
               scr:unload()
               os.remove(scr.path)
-              Notifications.Show(scr.name .. ':\nUnloaded and Deleted!', Notifications.TYPE.OK)
+              Notifications.Show(scr.name .. ':\n' .. locales.get("unloaded_and_deleted") .. '!', Notifications.TYPE.OK)
               imgui.CloseCurrentPopup()
             end
             imgui.SameLine()
-            if imgui.Button('No', imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
+            if imgui.Button(locales.get("no"), imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
               imgui.CloseCurrentPopup()
             end
     
@@ -720,41 +908,41 @@ imgui.OnFrame(
           end
         elseif selectedDisabledScript ~= nil then
           imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1.0))
-          imgui.TextWrapped('Name: %s', selectedDisabledScript.name)
-          imgui.TextWrapped('File name: %s', selectedDisabledScript.filename)
-          imgui.TextWrapped('Status: Disabled')
-          imgui.TextWrapped('Path: %s', selectedDisabledScript.path)
+          imgui.TextWrapped(locales.get("scr_name", selectedDisabledScript.name))
+          imgui.TextWrapped(locales.get("scr_filename", selectedDisabledScript.filename))
+          imgui.TextWrapped(locales.get("status_disabled"))
+          imgui.TextWrapped(locales.get("scr_path", selectedDisabledScript.path))
           imgui.PopStyleColor()
   
           
-          if imgui.Button('Enable') then
+          if imgui.Button(locales.get("enable")) then
             if enableScript(selectedDisabledScript.path) then
               selectedScriptId = -1
             end
           end
           imgui.SameLine()
-          if imgui.Button('Delete') then
-            imgui.OpenPopup('Delete disabled script')
+          if imgui.Button(locales.get("delete")) then
+            imgui.OpenPopup(locales.get("delete_disabled_script"))
           end
           
-          if imgui.BeginPopupModal('Delete disabled script') then
-            imgui.Text('Are you sure you want to permanently delete the disabled script: '..selectedDisabledScript.name..'?')
+          if imgui.BeginPopupModal(locales.get("delete_disabled_script")) then
+            imgui.Text(locales.get("confirm_delete_disabled_script", selectedDisabledScript.name))
     
-            if imgui.Button('Yes', imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
+            if imgui.Button(locales.get("yes"), imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
               os.remove(selectedDisabledScript.path)
-              Notifications.Show(selectedDisabledScript.name .. ':\nDeleted permanently!', Notifications.TYPE.OK)
+              Notifications.Show(selectedDisabledScript.name .. ':\n' .. locales.get("delted_permanently") .. '!', Notifications.TYPE.OK)
               selectedScriptId = -1
               imgui.CloseCurrentPopup()
             end
             imgui.SameLine()
-            if imgui.Button('No', imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
+            if imgui.Button(locales.get("No"), imgui.ImVec2(150 * MONET_DPI_SCALE, 50 * MONET_DPI_SCALE)) then
               imgui.CloseCurrentPopup()
             end
     
             imgui.End()
           end
         else
-          imgui.Text('<<<\nSelect any script on the left!')
+          imgui.Text(locales.get("select_any_script"))
         end
 
         imgui.Columns(1)
@@ -763,12 +951,12 @@ imgui.OnFrame(
         imgui.EndTabItem()
       end
 
-      if imgui.BeginTabItem('Log') then -- log of recent events
-        if imgui.InputTextWithHint('##LogSearch', 'Find...', logSearchBuffer, ffi.sizeof(logSearchBuffer)) then
+      if imgui.BeginTabItem(locales.get("log")) then -- log of recent events
+        if imgui.InputTextWithHint('##LogSearch', locales.get("find") .. "...", logSearchBuffer, ffi.sizeof(logSearchBuffer)) then
           logSearchText = ffi.string(logSearchBuffer):lower()
         end
         imgui.SameLine()
-        if imgui.Button('Clear history') then
+        if imgui.Button(locales.get("clear_history")) then
           messages:clear()
         end
 
@@ -790,18 +978,18 @@ imgui.OnFrame(
         didLogRender = true
       end
 
-      if imgui.BeginTabItem('Last crashes') then -- log of last crashes
+      if imgui.BeginTabItem(locales.get("last_crashes")) then -- log of last crashes
         imgui.BeginChild('##LastCrashesChild', imgui.ImVec2(0, 0), true) -- child in order to only scroll table and for border
         imgui.Columns(3, '##LastCrashesColumns', true)
 
         imgui.AlignTextToFramePadding()
-        imgui.Text('Script name')
+        imgui.Text(locales.get("last_crashes"))
         imgui.NextColumn()
         imgui.AlignTextToFramePadding()
-        imgui.Text('Time since crash')
+        imgui.Text(locales.get("time_since_crash"))
         imgui.NextColumn()
         imgui.AlignTextToFramePadding()
-        imgui.Text('Actions')
+        imgui.Text(locales.get("actions"))
         imgui.Separator()
         imgui.NextColumn()
 
@@ -815,14 +1003,14 @@ imgui.OnFrame(
             imgui.NextColumn()
 
             if not v.reloaded then
-              if imgui.Button('Reload##' .. tostring(i)) then
+              if imgui.Button(locales.get("reload") .. '##' .. tostring(i)) then
                 reloadLastCrashInfos[v.path] = v
                 script.load(v.path)
 
                 lua_thread.create(function()
                   wait(0)
                   if not v.reloaded then
-                    Notifications.Show(v.name .. ':\nReload failed!', Notifications.TYPE.ERROR)
+                    Notifications.Show(v.name .. ':\n' .. locales.get("reload_failed") .. '!', Notifications.TYPE.ERROR)
                     reloadLastCrashInfos[v.path] = nil
                   end
                 end)
@@ -831,7 +1019,7 @@ imgui.OnFrame(
               imgui.SameLine()
             end
 
-            if imgui.Button('Hide##' .. tostring(i)) then
+            if imgui.Button(locales.get("hide") .. '##' .. tostring(i)) then
               v.hidden = true
             end
 
@@ -846,9 +1034,9 @@ imgui.OnFrame(
         imgui.EndTabItem()
       end
 
-      if imgui.BeginTabItem('Shell') then -- lua shell
+      if imgui.BeginTabItem(locales.get("shell")) then -- lua shell
         imgui.SetNextItemWidth(-1)
-        if imgui.InputTextWithHint('##ShellInput', 'Run...', shellInputBuffer, ffi.sizeof(shellInputBuffer), imgui.InputTextFlags.EnterReturnsTrue) then
+        if imgui.InputTextWithHint('##ShellInput', locales.get("run") .. '...', shellInputBuffer, ffi.sizeof(shellInputBuffer), imgui.InputTextFlags.EnterReturnsTrue) then
           local text = ffi.string(shellInputBuffer)
           imgui.StrCopy(shellInputBuffer, '')
           shellHistory:push('>> ' .. text)
@@ -875,7 +1063,7 @@ imgui.OnFrame(
           end
         end
 
-        if imgui.Button('Up') then
+        if imgui.Button(locales.get("up")) then
           shellInputHistoryPos = shellInputHistoryPos - 1
           if shellInputHistory[shellInputHistoryPos] ~= nil then
             imgui.StrCopy(shellInputBuffer, shellInputHistory[shellInputHistoryPos])
@@ -884,7 +1072,7 @@ imgui.OnFrame(
           end
         end
         imgui.SameLine()
-        if imgui.Button('Down') then
+        if imgui.Button(locales.get("down")) then
           shellInputHistoryPos = shellInputHistoryPos + 1
           if shellInputHistoryPos >= 0 then
             shellInputHistoryPos = 0
@@ -894,12 +1082,12 @@ imgui.OnFrame(
           end
         end
         imgui.SameLine()
-        if imgui.Button('Clear') then
+        if imgui.Button(locales.get("clear")) then
           imgui.StrCopy(shellInputBuffer, '')
           shellInputHistoryPos = 0
         end
         imgui.SameLine()
-        if imgui.Button('Clear history') then
+        if imgui.Button(locales.get("clear_history")) then
           imgui.StrCopy(shellInputBuffer, '')
           shellInputHistoryPos = 0
 
@@ -931,18 +1119,18 @@ imgui.OnFrame(
         didShellRender = true
       end
 
-      if imgui.BeginTabItem('Settings') then -- settings menu
-        if imgui.Checkbox('Crash notifications', imCrashNotifications) then
+      if imgui.BeginTabItem(locales.get("settings")) then -- settings menu
+        if imgui.Checkbox(locales.get("crash_notifications"), imCrashNotifications) then
           config.crashNotifications = imCrashNotifications[0]
           cfg.save(config)
         end
 
-        if imgui.Checkbox('Script message notifications', imScriptMessageNotifications) then
+        if imgui.Checkbox(locales.get("script_message_notifications"), imScriptMessageNotifications) then
           config.scriptMessageNotifications = imScriptMessageNotifications[0]
           cfg.save(config)
         end
 
-        if imgui.InputInt('Log messages count', imMessagesCount, 1, 20) then
+        if imgui.InputInt(locales.get("log_messages_count"), imMessagesCount, 1, 20) then
           if imMessagesCount[0] < 10 then
             imMessagesCount[0] = 10
           elseif imMessagesCount[0] > 5000 then
@@ -961,7 +1149,7 @@ imgui.OnFrame(
           messages = newBuffer
         end
 
-        if imgui.InputInt('Last crashes count', imLastCrashesCount, 1, 1) then
+        if imgui.InputInt(locales.get("last_crashes_count"), imLastCrashesCount, 1, 1) then
           if imLastCrashesCount[0] < 2 then
             imLastCrashesCount[0] = 2
           elseif imLastCrashesCount[0] > 100 then
@@ -980,7 +1168,7 @@ imgui.OnFrame(
           lastCrashes = newBuffer
         end
 
-        if imgui.InputInt('Shell history count', imShellHistoryCount, 1, 20) then
+        if imgui.InputInt(locales.get("shell_history_count"), imShellHistoryCount, 1, 20) then
           if imShellHistoryCount[0] < 10 then
             imShellHistoryCount[0] = 10
           elseif imShellHistoryCount[0] > 5000 then
@@ -1003,22 +1191,11 @@ imgui.OnFrame(
           shellInputHistory = newInputBuffer
         end
 
-        if imgui.InputInt('Mods Store Zoom', imScriptStoreZoom, 1, 20) then
-          if imScriptStoreZoom[0] < 40 then
-            imScriptStoreZoom[0] = 40
-          elseif imScriptStoreZoom[0] > 200 then
-            imScriptStoreZoom[0] = 200
-          end
-
-          config.scriptStoreZoom = imScriptStoreZoom[0]
-          cfg.save(config)
-          if wvWindow.created then wv.executeJS(0, "document.body.style.zoom = \""..config.scriptStoreZoom.."%\";") end
-        end
-
         imgui.EndTabItem()
       end
 
-      if imgui.BeginTabItem('Mods Store') then
+      if imgui.BeginTabItem(locales.get("mods_store"), nil, wvWindow.force and 2 or 0) then
+        wvWindow.force = false
         didScriptStoreRender = true
 
         if not isWebViewsLoaded and not isWebViewsLoadTry then
@@ -1029,7 +1206,6 @@ imgui.OnFrame(
             local canceledTasks = {}
             function wv.onAction(data)
               if data.type == "WV_LOADED" then
-                wv.executeJS(data.browserid, "document.body.style.zoom = \""..config.scriptStoreZoom.."%\";")
                 wv.executeJS(data.browserid, "window.app.webInitialize();")
                 wv.executeJS(data.browserid, "window.app.scriptVersion("..script.this.version_num..");")
               elseif data.type == "WV_ANSWER" then
@@ -1050,12 +1226,12 @@ imgui.OnFrame(
                       local filename = json.name
                       local function notifyUpdate() wv.executeJS(data.browserid, "window.app.onDownloadProgress(\""..json.task.."\", \""..stage.."\", \""..filename.."\", "..string.format("%.2f", progress)..")") end
                       local function isTaskCancelled() if canceledTasks[json.task] then return true else return false end end
-                      wvWindow.confirmDialog.text = "Are you sure you want to download ".. json.name .. "?"
-                      wvWindow.confirmDialog.response = 0
-                      while wvWindow.confirmDialog.response == 0 do wait(0) end
+                      wvWindow.confirmDialog.text = locales.get("confirm_download", json.name)
+                      while wvWindow.confirmDialog.text ~= nil do wait(0) end
                       if wvWindow.confirmDialog.response == 1 then
                         wv.executeJS(data.browserid, "window.app.onInstallStage('loading')")
                         wv.executeJS(data.browserid, "window.app.setFilename('"..json.name.."')")
+                        showAds() -- udalenie etoi stroki ostavit razraba bez edi na 100 dneu
                         downloadToFile(json.url, jsonModPath..json.name, function(type, pos, total_size)
                           if isTaskCancelled() then
                             stage = "cancelled"
@@ -1092,9 +1268,8 @@ imgui.OnFrame(
                                     stage = "completed"
                                     wv.executeJS(data.browserid, "window.app.setModInstalled(\""..json.name.."\", true)")
                                     if json.type == "mod" then
-                                      wvWindow.confirmDialog.text = "Are you want to reload all scripts?\n(the installed mod was in .zip and was not automatically loaded)"
-                                      wvWindow.confirmDialog.response = 0
-                                      while wvWindow.confirmDialog.response == 0 do wait(0) end
+                                      wvWindow.confirmDialog.text = locales.get("confirm_reload_all_zip")
+                                      while wvWindow.confirmDialog.text ~= nil do wait(0) end
                                       if wvWindow.confirmDialog.response == 1  then
                                         reloadScripts()
                                       end
@@ -1127,9 +1302,8 @@ imgui.OnFrame(
                     end)
                   elseif json.action == "removeFile" and jsonModPath then
                     lua_thread.create(function()
-                      wvWindow.confirmDialog.text = "Are you sure you want to delete ".. json.name .. "?"
-                      wvWindow.confirmDialog.response = 0
-                      while wvWindow.confirmDialog.response == 0 do wait(0) end
+                      wvWindow.confirmDialog.text = locales.get("confirm_delete", json.name)
+                      while wvWindow.confirmDialog.text ~= nil do wait(0) end
                       if wvWindow.confirmDialog.response == 1  then
                         if not json.zip then unloadScriptByName(jsonModPath..json.name) end
                         os.remove(jsonModPath..json.name)
@@ -1152,6 +1326,8 @@ imgui.OnFrame(
                         file:write(json.id)
                         file:close()
                     end
+                  elseif json.action == "setVIPMode" then
+                    isVip = json.is_vip
                   end
                 end
               elseif data.type == "WV_PROGRESS" then
@@ -1176,7 +1352,10 @@ imgui.OnFrame(
         end
 
         if not wvWindow.created and not wvWindow.serverfind and isWebViewsLoaded then
+          wv.createBrowser(0, "about:blank")
+          wv.setVisible(0, false)
           wvWindow.serverfind = true
+          wvWindow.created = true
 
 
           local headers = {
@@ -1190,7 +1369,8 @@ imgui.OnFrame(
               if response and code >= 200 and code < 300 then
                 local assert = decodeJson(response)
                 if assert.hash == "5aa4731d5d84e09e2f7e7141e560104f" and wvWindow.serverfind then
-                  wv.createBrowser(0, url)
+                 wvWindow.progress = 0
+                  wv.changeUrl(0, url)
                   wv.setClickable(0, true)
                   wv.setVisible(0, false)
                   wvWindow.created = true
@@ -1202,6 +1382,7 @@ imgui.OnFrame(
           end
         end
       end
+
 
       imgui.EndTabBar()
       wasInLog = didLogRender
@@ -1215,6 +1396,20 @@ imgui.OnFrame(
       end
     end
 
+    local langs = locales.get_languages()
+
+    imgui.SetCursorPos(imgui.ImVec2(start_langs_x + imgui.GetWindowContentRegionWidth() - (imgui.CalcTextSize(locales.current:upper()).x + imgui.GetStyle().FramePadding.x * 2), start_langs_y))
+
+    if imgui.Button(locales.current:upper()) then
+        local idx = 1
+        for i, l in ipairs(langs) do
+            if l == locales.current then idx = i break end
+        end
+        locales.set_lang(langs[idx % #langs + 1])
+        config.currentLang = langs[idx % #langs + 1]
+        cfg.save(config)
+    end
+
     imgui.End()
   end
 )
@@ -1225,7 +1420,7 @@ imgui.OnFrame(
 -- called whenever a script crashes
 function onScriptCrashed(scr, msg)
   if config.crashNotifications then
-    Notifications.Show(scr.name .. ':\nCrashed!', Notifications.TYPE.ERROR)
+    Notifications.Show(scr.name .. ':\n' .. locales.get("crashed") .. '!', Notifications.TYPE.ERROR)
   end
 
   lastCrashes:push({
@@ -1296,7 +1491,7 @@ function onScriptLoad(scr)
   if reloadLastCrashInfos[path] ~= nil then
     local v = reloadLastCrashInfos[path]
     v.reloaded = true
-    Notifications.Show(v.name .. ':\nReloaded!', Notifications.TYPE.OK)
+    Notifications.Show(v.name .. ':\n' .. locales.get("reloaded") .. '!', Notifications.TYPE.OK)
     reloadLastCrashInfos[path] = nil
   else
     for i, v in any_ipairs(lastCrashes) do
@@ -1309,7 +1504,39 @@ end
 
 -- check for menu opening
 function main()
+  locales.set_lang(config.currentLang)
+  lua_thread.create(showSwipeLeftHint)
+  local count = 0 for f in lfs.dir(getWorkingDirectory()) do if lfs.attributes(getWorkingDirectory()..'/'..f, 'mode') == 'file' then count = count + 1 end end
+  if not config.skipSuggestion and count < 4 then
+    windowState[0] = true
+    wvWindow.force = true
+    wvWindow.confirmDialog.text = locales.get("confirm_suggestion")
+    wvWindow.confirmDialog.buttons = {locales.get("yes"), locales.get("skip_suggestion")}
+    while wvWindow.confirmDialog.text ~= nil do wait(0) end
+    if wvWindow.confirmDialog.response == 2 then 
+        config.skipSuggestion = true
+        cfg.save(config) 
+        thisScript():reload()
+    end
+  end
   while true do
+    if isSampAvailable() and not commandsRegistered then
+      sampRegisterChatCommand("store", function() 
+        windowState[0] = true
+        wvWindow.force = true
+        lua_thread.create(showSwipeLeftHint)
+      end)
+      sampRegisterChatCommand("mtg", function() 
+        windowState[0] = true
+        wvWindow.force = true
+        lua_thread.create(showSwipeLeftHint)
+      end)
+      sampRegisterChatCommand("mods", function() 
+        windowState[0] = true
+        lua_thread.create(showSwipeLeftHint)
+      end)
+      commandsRegistered = true
+    end
     if isWidgetSwipedLeft(WIDGET_RADAR) then
       windowState[0] = not windowState[0]
     end
@@ -1553,11 +1780,11 @@ function disableScript(scriptPath)
   
   local success = os.rename(scriptPath, disabledPath)
   if success then
-    Notifications.Show("Script disabled: " .. fileName, Notifications.TYPE.OK)
+    Notifications.Show(locales.get("script_disabled", fileName), Notifications.TYPE.OK)
     disabledScripts = getDisabledScripts()
     return true
   else
-    Notifications.Show("Failed to disable script: " .. fileName, Notifications.TYPE.ERROR)
+    Notifications.Show(locales.get("failed_to_disable", fileName), Notifications.TYPE.ERROR)
     return false
   end
 end
@@ -1572,12 +1799,12 @@ function enableScript(scriptPath)
   
   local success = os.rename(disabledPath, enabledPath)
   if success then
-    Notifications.Show("Script enabled: " .. fileName, Notifications.TYPE.OK)
+    Notifications.Show(locales.get("script_enabled", fileName), Notifications.TYPE.OK)
     script.load(enabledPath)
     disabledScripts = getDisabledScripts()
     return true
   else
-    Notifications.Show("Failed to enable script: " .. fileName, Notifications.TYPE.ERROR)
+    Notifications.Show(locales.get("failed_to_enable", fileName), Notifications.TYPE.ERROR)
     return false
   end
 end
@@ -1609,11 +1836,11 @@ function unloadScriptByName(scriptPath)
   for i, scr in ipairs(scripts) do
     if scr.path == scriptPath then
       scr:unload()
-      return true, "Script unloaded: " .. scriptPath
+      return true, locales.get("script_unloaded", scriptPath)
     end
   end
   
-  return false, "Script not found: " .. scriptPath
+  return false, locales.get("script_not_found", scriptPath)
 end
 
 
@@ -1655,6 +1882,21 @@ function getRealPath(relativePath)
     end
     
     return currentPath
+end
+
+function showAds()
+  if not isVip then
+    local ok, result = pcall(function() 
+      local adsClass = envu.FindClass("com/arzmod/radare/AppAds")
+      if not adsClass then
+          print("Failed to find AppAds class")
+          return false
+      end
+      local isShowed = envu.CallStaticBooleanMethod(adsClass, "showRewarded", "()Z")
+      return toboolean(isShowed) 
+    end) 
+    if ok and result then wv.executeJS(0, "window.app.onViewAds()") end
+  end
 end
 
 function unpack_archive(path_to_archive, output_path, progress_callback)
@@ -1742,4 +1984,52 @@ function isAllowedUrl(url)
         end
     end
     return false
+end
+
+function showSwipeLeftHint()
+    local m_pWidgets = jit.arch == "arm" and memory.getuint32(MONET_GTASA_BASE + 0x67947C) or memory.getuint64(MONET_GTASA_BASE + 0x850910)
+    local widgetPtr = jit.arch == "arm64" and memory.getuint64(m_pWidgets + WIDGET_RADAR * 8) or memory.getuint32(m_pWidgets + WIDGET_RADAR * 4)
+    
+    while widgetPtr == 0 do widgetPtr = jit.arch == "arm64" and memory.getuint64(m_pWidgets + WIDGET_RADAR * 8) or memory.getuint32(m_pWidgets + WIDGET_RADAR * 4) wait(0) end
+    while not (memory.getuint8(widgetPtr + (jit.arch == "arm" and 78 or 90)) == 1) do wait(0) end
+
+    local x1 = memory.getfloat(widgetPtr + (jit.arch == "arm" and 32 or 44))
+    local x2 = memory.getfloat(widgetPtr + (jit.arch == "arm" and 40 or 52))
+    local y1 = memory.getfloat(widgetPtr + (jit.arch == "arm" and 44 or 56))
+    local y2 = memory.getfloat(widgetPtr + (jit.arch == "arm" and 36 or 48))
+    local w, h = x2 - x1, y2 - y1
+
+    local cy = y1 + h / 2
+    local rightX = x1 + w - 10
+    local leftX = x1 + 10
+    local color = 0xFFFF0000
+    local bgColor = 0x99000000
+
+    local arrowSize = 60
+
+    local font = renderCreateFont("Arial", 15, 6)
+    local line1 = "Swipe left on map"
+    local line2 = "to open mods menu"
+    local w1 = renderGetFontDrawTextLength(font, line1)
+    local w2 = renderGetFontDrawTextLength(font, line2)
+
+    local totalDuration = 9
+    local sweepDuration = 3
+    local startTime = os.clock()
+
+    while os.clock() - startTime < totalDuration do
+        local elapsed = os.clock() - startTime
+        local sweepT = (elapsed % sweepDuration) / sweepDuration
+        local arrowX = rightX - (rightX - leftX) * sweepT
+
+        renderDrawBox(x1, y1, w, h, bgColor)
+
+        renderDrawLine(arrowX + arrowSize * 0.6, cy, arrowX + arrowSize * 1.5, cy, arrowSize * 0.4, color)
+        renderDrawPolygon(arrowX + arrowSize * 0.27, cy - arrowSize * 0.5, arrowSize, arrowSize, 3, 180.0, color)
+
+        renderFontDrawText(font, line1, x1 + w / 2 - w1 / 2, cy + 20, color)
+        renderFontDrawText(font, line2, x1 + w / 2 - w2 / 2, cy + 40, color)
+
+        wait(0)
+    end
 end
