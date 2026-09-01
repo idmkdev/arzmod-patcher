@@ -854,67 +854,12 @@ public class ApplicationStart {
                 } catch (Exception e) {
                     Log.e("arzmod-app-module", "Error checking for updates", e);
                 }
-
-                try {
-                    Log.d("arzmod-app-module", "Starting files extraction...");
-                    InputStream zipStream = context.getAssets().open("arzmod/files.zip");
-                    java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(zipStream);
-                    java.util.zip.ZipEntry entry;
-
-                    while ((entry = zis.getNextEntry()) != null) {
-                        String entryName = entry.getName();
-                        if (entry.isDirectory()) continue;
-
-                        if (entryName.startsWith("data/") || entryName.startsWith("media/")) {
-                            String[] parts = entryName.split("/");
-                            if (parts.length >= 3) {
-                                String packageName = parts[1];
-                                File targetDir = null;
-                                
-                                if (entryName.startsWith("data/")) {
-                                    String relativePath = entryName.substring(5 + packageName.length() + 1);
-                                    targetDir = new File(context.getExternalFilesDir(null).getParentFile(), relativePath);
-                                } else if (entryName.startsWith("media/")) {
-                                    String relativePath = entryName.substring(6 + packageName.length() + 1);
-                                    targetDir = new File(context.getExternalMediaDirs()[0], relativePath);
-                                }
-
-                                if (targetDir != null) {
-                                    boolean shouldExtract = true;
-                                    
-                                    if (targetDir.exists() && SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_SKIP_VERIFY)) {
-                                        shouldExtract = false;
-                                        Log.d("arzmod-app-module", "Skipping rewrite file: " + targetDir.getAbsolutePath());
-                                    }
-
-                                    if (shouldExtract) {
-                                        Log.d("arzmod-app-module", "Extracting: " + entryName + " -> " + targetDir.getAbsolutePath());
-
-                                        try {
-                                            targetDir.getParentFile().mkdirs();
-                                            java.io.FileOutputStream fos = new java.io.FileOutputStream(targetDir);
-                                            byte[] buffer = new byte[8192];
-                                            int len;
-                                            while ((len = zis.read(buffer)) > 0) {
-                                                fos.write(buffer, 0, len);
-                                            }
-                                            fos.close();
-                                        } catch (Exception e) {
-                                            Log.e("arzmod-app-module", "Error extracting file: " + entryName, e);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        zis.closeEntry();
-                    }
-                    zis.close();
-                    Log.d("arzmod-app-module", "Files extraction completed");
-                } catch (Exception e) {
-                    Log.e("arzmod-app-module", "Error extracting files", e);
-                }
             }
         }).start();
+    }
+
+    public static void checkLocalFilesUpdate() {
+        FilesUpdateManager.start();
     }
 
     public static class OutlinedTextView extends android.widget.TextView {

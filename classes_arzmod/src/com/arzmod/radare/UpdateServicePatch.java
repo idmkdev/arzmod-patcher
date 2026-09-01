@@ -136,12 +136,7 @@ public class UpdateServicePatch {
         return false;
     }
 
-    public void checkUserFiles(JSONArray jsonArray) {
-        if(SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_CLEAR_MODE)) 
-        {
-            Log.i("arzmod-updsrv-module", "Clean up files...");
-            cleanUpFiles(jsonArray);
-        }
+    public void checkUserFiles() {
         if(!SettingsPatch.getSettingsKeyValue(SettingsPatch.IS_MODS_MODE)) 
         {
             Log.i("arzmod-updsrv-module", "User files is disabled. No check & update all files");
@@ -173,20 +168,18 @@ public class UpdateServicePatch {
     public static boolean isServiceFile(File file) {
         if (!isInitialized) return false;
 
-        if (BuildConfig.GIT_BUILD) {
-            String filePath = file.getPath();
-            for (String servicePath : serviceFiles) {
-                if (filePath.endsWith(servicePath)) {
-                    return true;
-                }
+        String filePath = file.getPath();
+        for (String servicePath : serviceFiles) {
+            if (filePath.endsWith(servicePath)) {
+                return true;
             }
         }
-        
+    
         return false;
     }
 
     public boolean isUserFile(File file) {
-        if(BuildConfig.GIT_BUILD && isServiceFile(file))
+        if(isServiceFile(file))
         {
             Log.v("arzmod-updsrv-module", file.getName() + " is a service file");
             return true;

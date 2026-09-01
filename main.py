@@ -1193,6 +1193,51 @@ def get_src_path(copy_folder, path):
 def get_app_release_name():
 	return f"app-{'arzmod' if project == ARIZONA_MOBILE else 'rdnmod'}-{'x32' if not usearm64 else 'x64'}"
 
+def build_const(reg, value):
+    if isinstance(value, str):
+        op = "const-string/jumbo" if len(value) > 30000 else "const-string"
+        return f'\t{op} {reg}, "{value}"\n'
+    if isinstance(value, bool):
+        return f'\tconst {reg}, {1 if value else 0}\n'
+    if isinstance(value, int):
+        if -(2 ** 31) <= value < 2 ** 31:
+            return f'\tconst {reg}, {value}\n'
+        return f'\tconst-wide {reg}, {value}\n'
+    raise ValueError(f"Unsupported const type: {type(value)}")
+
+
+def patch_invoke_before(file_path, method_name, invoke_target, args, op="direct"):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    in_method = method_name is None
+    updated = []
+    found = False
+
+    for line in lines:
+        if method_name is not None and method_name + "(" in line:
+            in_method = True
+        if method_name is not None and in_method and line.strip() == ".end method":
+            in_method = False
+
+        insert = []
+        if in_method and f"invoke-{op} " in line and invoke_target in line:
+            regs = re.findall(r'\b[vp]\d+\b', line)
+            for idx, value in sorted(args.items()):
+                reg = regs[idx - 1] if idx <= len(regs) else None
+                if reg is None:
+                    continue
+                insert.append(build_const(reg, value))
+            found = found or bool(insert)
+
+        updated.extend(insert)
+        updated.append(line)
+
+    if not found:
+        exitWithError("patch_invoke_before: invoke not found")
+
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.writelines(updated)
 
 ####################################################################################
 
@@ -1281,39 +1326,6 @@ def arzmod_patch():
 
 
 		# UPDATESERVICE PATCH (ARZMOD FILESERVERS)
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), "data/files", "data")
-		append_to_file(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), """
-			.method public getARZMODPatchedPath(Ljava/lang/String;)Ljava/io/File;
-				.locals 2
-				const-string v0, "/storage/emulated/0/Android"
-				new-instance v1, Ljava/io/File;
-				invoke-direct {v1, v0}, Ljava/io/File;-><init>(Ljava/lang/String;)V
-				return-object v1
-			.end method
-		""")
-		apply_function_to_files(search_and_replace, get_src_path(patchs_path, "/com/arizona/launcher"), "Lcom/arizona/launcher/UpdateService;->getExternalFilesDir(Ljava/lang/String;)Ljava/io/File;", "Lcom/arizona/launcher/UpdateService;->getARZMODPatchedPath(Ljava/lang/String;)Ljava/io/File;", True)
-		replace_code_between_lines(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), ".method private static final checkUpdate$lambda$0$0(Lorg/json/JSONObject;Ljava/lang/String;Ljava/lang/String;)Lorg/json/JSONArray;", ".end method", """
-			.method private static final checkUpdate$lambda$0$0(Lorg/json/JSONObject;Ljava/lang/String;Ljava/lang/String;)Lorg/json/JSONArray;
-				.locals 1
-				const-string v2, "data"
-				invoke-virtual {p0, v2}, Lorg/json/JSONObject;->getJSONObject(Ljava/lang/String;)Lorg/json/JSONObject;
-				move-result-object v1
-				invoke-virtual {v1, v2}, Lorg/json/JSONObject;->getJSONArray(Ljava/lang/String;)Lorg/json/JSONArray;
-				move-result-object v1
-				return-object v1
-			.end method
-		""")
-		append_to_file(get_src_path(patchs_path, "/com/arizona/launcher/downloader/FilesChek.smali"), """
-			.method public static getARZMODPatchedPath(Ljava/lang/String;)Ljava/io/File;
-				.locals 2
-				const-string v0, "/storage/emulated/0/Android"
-				new-instance v1, Ljava/io/File;
-				invoke-direct {v1, v0}, Ljava/io/File;-><init>(Ljava/lang/String;)V
-				return-object v1
-			.end method
-		""")
-		apply_function_to_files(search_and_replace, get_src_path(patchs_path, "/com/arizona/launcher/downloader"), r'invoke-virtual\s+\{([vp0-9]+),\s*([vp0-9]+)\},\s*Landroid/content/Context;->getExternalFilesDir\(Ljava/lang/String;\)Ljava/io/File;', r'invoke-static {\2}, Lcom/arizona/launcher/downloader/FilesChek;->getARZMODPatchedPath(Ljava/lang/String;)Ljava/io/File;', True, True)
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/downloader/FilesChek.smali"), "\"/local_manifest.json\"", f"\"/data/{package_name}/files/local_manifest.json\"")
 		replace_code_between_lines(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench$IncomingHandler.smali"), ".method static final handleMessage$lambda$0(Lcom/arizona/launcher/MainEntrench;)Lkotlin/Unit;", ".end method", """
 			.method static final handleMessage$lambda$0(Lcom/arizona/launcher/MainEntrench;)Lkotlin/Unit;
 				.locals 1
@@ -1326,31 +1338,17 @@ def arzmod_patch():
 		""")
 		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench$IncomingHandler.smali"), "Lcom/arizona/launcher/MainEntrench$IncomingHandler$$ExternalSyntheticLambda4", "Lcom/arizona/launcher/MainEntrench$IncomingHandler$$ExternalSyntheticLambda0")
 
-		replace_block_in_file(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), """
-		invoke-direct {v3, v4}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
-
-		invoke-virtual {v3, v0}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
-
-		move-result-object v0
-
-		const-string v3, ".apk"
-
-		invoke-virtual {v0, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
-
-		move-result-object v0
-
-		invoke-virtual {v0}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
-
-		move-result-object v0
-		""", "")
-
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/util/FileServers.smali"), "/game/release/" if project == ARIZONA_MOBILE else "/release/", "/")
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), "launcher_new/app-arizona-release_web" if project == ARIZONA_MOBILE else "launcher_new/app-rodina-release_web", f"launcher_new/{get_app_release_name()}")
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), "const-string v4, \"app-arizona-release_web-\"" if project == ARIZONA_MOBILE else "const-string v4, \"app-rodina-release_web-\"", f"const-string v0, \"/data/{package_name}/files/{get_app_release_name()}.apk\"")
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), "app-arizona-release_web" if project == ARIZONA_MOBILE else "app-rodina-release_web", f"/data/{package_name}/files/{get_app_release_name()}")
 		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateActivity$IncomingHandler.smali"), "app-arizona-release_web" if project == ARIZONA_MOBILE else "app-rodina-release_web", get_app_release_name())
-		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), "app_version.json", f"app_version{'' if not usearm64 else '_x64'}.json")
+		search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/updater/apk/LauncherUpdateController$checkLauncherUpdate$1.smali"), f"app_version.json", f"app_version{'' if not usearm64 else '_x64'}.json")
+		patch_invoke_before(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), None, "LauncherUpdateConfig;-><init>", {4: "x32" if not usearm64 else "x64", 5: "arzmod" if project == ARIZONA_MOBILE else "rdnmod"})
 
+		replace_code_between_lines(get_src_path(patchs_path, "/com/arizona/launcher/util/FileServerRouteResolver.smali"), ".method private final channelPath(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", ".end method", """
+		.method private final channelPath(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+			.locals 0
+			const-string v0, ""
+			return-object v0
+		.end method""")	
+	
 		append_to_file(get_src_path(patchs_path, "/com/arizona/game/BuildConfig.smali"), ".field public static final GIT_BUILD:Z = false")
 	else:
 		insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), ".method protected onCreate", "invoke-super {p0, p1}, Lcom/arizona/launcher/Hilt_MainEntrench;->onCreate(Landroid/os/Bundle;)V", """
@@ -1359,23 +1357,28 @@ def arzmod_patch():
 
 		append_to_file(get_src_path(patchs_path, "/com/arizona/game/BuildConfig.smali"), ".field public static final GIT_BUILD:Z = true")
 
-		# ADD LOCAL FILES FROM ARZMOD AND COMFORTABLE USE ARIZONA FILESERVERS
-		localfiles = f"{working_dir}/localfiles"
-		if os.path.exists(f"{localfiles}/temp"):
-			shutil.rmtree(f"{localfiles}/temp")
-		os.makedirs(f"{localfiles}/temp")
-		project_name = "arizona" if project == ARIZONA_MOBILE else "rodina"
-		shutil.copytree(f"{localfiles}/{project_name}", f"{localfiles}/temp/{project_name}")
-		temppath = f"{localfiles}/temp/{project_name}" 
-		replace_package_folders(temppath, "__app_package_set", package_name)
-		markuptxt = create_markup_paths(temppath, 'markup.txt')
-		add_asset(markuptxt)
-		os.remove(markuptxt)
-		fileszip = zip_path(temppath, 'files.zip')
-		add_asset(fileszip)
-		os.remove(fileszip)
+	# ADD LOCAL FILES FROM ARZMOD AND COMFORTABLE USE ARIZONA FILESERVERS
+	localfiles = f"{working_dir}/localfiles"
+	if os.path.exists(f"{localfiles}/temp"):
 		shutil.rmtree(f"{localfiles}/temp")
-
+	os.makedirs(f"{localfiles}/temp")
+	project_name = "arizona" if project == ARIZONA_MOBILE else "rodina"
+	shutil.copytree(f"{localfiles}/{project_name}", f"{localfiles}/temp/{project_name}")
+	temppath = f"{localfiles}/temp/{project_name}" 
+	replace_package_folders(temppath, "__app_package_set", package_name)
+	markuptxt = create_markup_paths(temppath, 'markup.txt')
+	add_asset(markuptxt)
+	os.remove(markuptxt)
+	fileszip = zip_path(temppath, 'files.zip')
+	add_asset(fileszip)
+	os.remove(fileszip)
+	shutil.rmtree(f"{localfiles}/temp")
+	insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), ".method protected onCreate", "invoke-super {p0, p1}, Lcom/arizona/launcher/Hilt_MainEntrench;->onCreate(Landroid/os/Bundle;)V", """
+		invoke-static {}, Lcom/arzmod/radare/ApplicationStart;->checkLocalFilesUpdate()V
+		new-instance v2, Lcom/arzmod/radare/UpdateServicePatch;
+		invoke-direct {v2}, Lcom/arzmod/radare/UpdateServicePatch;-><init>()V
+		invoke-virtual {v2}, Lcom/arzmod/radare/UpdateServicePatch;->checkUserFiles()V
+	""")
 
 
 	# CONNECTSERVER PATCH
@@ -1551,29 +1554,12 @@ def arzmod_patch():
 	""")
 
 	# UPDATESERVICE (FilesChek from 1703) PATCH + classes_arzmod/src/com/arzmod/radare/UpdateServicePatch.java
-	search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/downloader/FilesChek$isAllFilesOk$1.smali"), "iget-boolean v6, p0, Lcom/arizona/launcher/downloader/FilesChek$isAllFilesOk$1;->$purgeExtraFiles:Z", "const/4 v6, 0x0")	
 	insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/MainEntrench.smali"), ".method private final checkGameUpdate", ".locals", """
 		invoke-static {}, Lcom/arzmod/radare/UpdateServicePatch;->isModeMods()Z
 		move-result v0
 		if-eqz v0, :continue_execution
 		return-void
 		:continue_execution
-	""")
-	insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/downloader/FilesChek.smali"), ".method public final checkSingleFile", "move-object/from16 v1, p1", """
-		new-instance v3, Lcom/arzmod/radare/UpdateServicePatch;
-		invoke-direct {v3}, Lcom/arzmod/radare/UpdateServicePatch;-><init>()V
-		invoke-virtual {v3, v1}, Lcom/arzmod/radare/UpdateServicePatch;->isUserFile(Ljava/io/File;)Z
-		move-result v3
-		if-eqz v3, :continue_execution
-		const/4 v3, 0x1
-		return v3
-		:continue_execution
-	""")
-	insert_smali_code_after_line(get_src_path(patchs_path, "/com/arizona/launcher/downloader/FilesChek.smali"), ".method public final checkGameDataUpdate", "move-object/from16 v1, p1", """
-		new-instance v7, Lcom/arzmod/radare/UpdateServicePatch;
-		invoke-direct {v7}, Lcom/arzmod/radare/UpdateServicePatch;-><init>()V
-		invoke-virtual {v7, v1}, Lcom/arzmod/radare/UpdateServicePatch;->checkUserFiles(Lorg/json/JSONArray;)V
-		const/4 v7, 0x0
 	""")
 	insert_smali_code_after_line(get_src_path(patchs_path, "/com/miami/game/core/app/root/nav/main/MainComponent.smali"), ".method public final navigateBackDialog", ".locals", """
 		const/4 v0, 0x0
@@ -2136,11 +2122,11 @@ if __name__ == "__main__":
 		if usearm64:
 			usearm64 = False
 			print("Переключаемся на ARM32")
-			if arzmodbuild: search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), "app_version_x64.json", "app_version.json")
+			if arzmodbuild: search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/updater/apk/LauncherUpdateController$checkLauncherUpdate$1.smali"), f"app_version{'' if usearm64 else '_x64'}.json", f"app_version{'' if not usearm64 else '_x64'}.json")
 		else:
 			usearm64 = True
 			print("Переключаемся на ARM64")
-			if arzmodbuild: search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), "app_version.json", "app_version_x64.json")
+			if arzmodbuild: search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/updater/apk/LauncherUpdateController$checkLauncherUpdate$1.smali"), f"app_version{'' if usearm64 else '_x64'}.json", f"app_version{'' if not usearm64 else '_x64'}.json")
 
 		if os.path.exists(app_dir + f"/lib/{'armeabi-v7a' if not usearm64 else 'arm64-v8a'}"):
 			shutil.rmtree(app_dir + f"/lib/{'armeabi-v7a' if not usearm64 else 'arm64-v8a'}")
@@ -2148,9 +2134,7 @@ if __name__ == "__main__":
 		install_game_libraries()
 
 		if arzmodbuild:
-			search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), f"launcher_new/{previuos_name}", f"launcher_new/{get_app_release_name()}")
-			search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), f"const-string v0, \"/data/{get_project_package_name()}/files/{previuos_name}.apk\"", f"const-string v0, \"/data/{get_project_package_name()}/files/{get_app_release_name()}.apk\"")
-			search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), f"/data/{get_project_package_name()}/files/{previuos_name}", f"/data/{get_project_package_name()}/files/{get_app_release_name()}")
+			patch_invoke_before(get_src_path(patchs_path, "/com/arizona/launcher/UpdateService.smali"), None, "LauncherUpdateConfig;-><init>", {4: "x32" if not usearm64 else "x64", 5: "arzmod" if project == ARIZONA_MOBILE else "rdnmod"})
 			search_and_replace(get_src_path(patchs_path, "/com/arizona/launcher/UpdateActivity$IncomingHandler.smali"), previuos_name, get_app_release_name())
 
 		rename = get_app_release_name()

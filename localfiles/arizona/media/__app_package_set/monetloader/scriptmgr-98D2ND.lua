@@ -456,7 +456,7 @@ local locales = {
             confirm_reload_all_zip = "Are you want to reload all scripts?\n(the installed mod was in .zip and was not automatically loaded)",
             confirm_delete = "Are you sure you want to delete %s?",
             crashed = "Crashed",
-            confirm_suggestion = "You don't have any scripts installed. Would you like to browse the script store?",
+            confirm_suggestion = "You don't have any scripts installed. Would you like to browse the script store?\nYou can return here at any time using the /store command.",
             skip_suggestion = "No, and don't offer it again.",
             script_disabled = "Script disabled: %s",
             failed_to_disable = "Failed to disable script: %s",
@@ -524,7 +524,7 @@ local locales = {
             confirm_reload_all_zip = "Хотите перезагрузить все скрипты?\n(установленный мод был в .zip и не был загружен автоматически)",
             confirm_delete = "Вы уверены, что хотите удалить %s?",
             crashed = "Произошёл сбой",
-            confirm_suggestion = "У вас не установлено ни одного скрипта. Хотите перейти в магазин скриптов?",
+            confirm_suggestion = "У вас не установлено ни одного скрипта. Хотите перейти в магазин скриптов?\nВы можете вернуться сюда в любое время по команде /store",
             skip_suggestion = "Нет, и больше не предлагать.",
             script_disabled = "Скрипт выключен: %s",
             failed_to_disable = "Не удалось выключить скрипт: %s",
@@ -1507,7 +1507,7 @@ function main()
   locales.set_lang(config.currentLang)
   lua_thread.create(showSwipeLeftHint)
   local count = 0 for f in lfs.dir(getWorkingDirectory()) do if lfs.attributes(getWorkingDirectory()..'/'..f, 'mode') == 'file' then count = count + 1 end end
-  if not config.skipSuggestion and count < 4 then
+  if not config.skipSuggestion and count < 5 then
     windowState[0] = true
     wvWindow.force = true
     wvWindow.confirmDialog.text = locales.get("confirm_suggestion")

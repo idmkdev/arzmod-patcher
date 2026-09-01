@@ -736,7 +736,6 @@ public class SettingsPatch {
         }
         settingsList.add(new BooleanSetting("Элементы UnityHUD", "При худе отличного от UnityHUD данная настройка покажет его элементы при этом не показывая его самого", IS_UNITY_ELEMENTS, false, sharedPreferences));
     
-        settingsList.add(new BooleanSetting("Очистка неиспольуемых файлов", "Данная функция очищает все файлы которые не нужны игре!\nФункция затрагивает только файлы в папке Android/data/"+packageName+"/files и удаляет все файлы необычные файлы\nЭта функция поможет вам удалить остатки сборки после удаления её из Android/media/"+packageName+"/files", IS_CLEAR_MODE, false, sharedPreferences));
         settingsList.add(new BooleanSetting("Режим копирования сборки", "С помощью этой функции вы сможете копировать свою сборку с Android/media/"+packageName+"/files в Android/data/"+packageName+"/files.\nЧтобы удалить сборку используйте функции проверки файлов, и включите функцию очистки неиспользуемых файлов, для очистки остатков.", IS_MODS_MODE, false, sharedPreferences));
         settingsList.add(new BooleanSetting("Проверка обновлений кеша игры", "При отключении данной функции, лаунчер не будет проверять обновления кеша игры", IS_MODE_MODS, true, sharedPreferences));
         settingsList.add(new BooleanSetting("Свободная кнопка запуска", "Данная функция позовляет запустить игру во время проверки обновления", IS_FREE_LAUNCH, false, sharedPreferences));
@@ -746,10 +745,7 @@ public class SettingsPatch {
         settingsList.add(new ChatPositionSetting("Позиция чата", CHAT_POSITION_ENABLED, sharedPreferences));
         settingsList.add(new BooleanSetting("Скрытие строки версии", "Скрывает строку версии в игре. Доступен также публичный метод, который позволяет вписать свою строку (пример использования есть в скрипте https://github.com/" + BuildConfig.GIT_OWNER + "/" + BuildConfig.GIT_REPO + "/tree/main/configs/scripts/setversionstring.lua )", IS_VERSION_HIDED, false, sharedPreferences));
 
-        if(BuildConfig.GIT_BUILD)
-        {
-            settingsList.add(new BooleanSetting("[GIT] Не перезаписывать модифицированные файлы", "Не перезаписывает ваши файлы если для них есть замена с локальных файлов GitHub\nНапример, если вы изменяете auth_video.mp4, чтобы оно не перезаписывалось, включите эту функцию.\nОбратите внимание, что при обновлении лаунчера с GitHub эту функцию стоит держать первое время включенной", IS_SKIP_VERIFY, false, sharedPreferences));
-        }
+        settingsList.add(new BooleanSetting("Не перезаписывать модифицированные ARZMOD файлы", "Не перезаписывает ваши файлы если для них есть замена с локальных файлов ARZMOD\nНапример, если вы изменяете файлы по умолчанию (скрипт менеджер, библиотеки), чтобы оно не перезаписывалось, включите эту функцию.\nОбратите внимание, что при обновлении ARZMOD лаунчера с этой функцией стоит держать первое время включенной", IS_SKIP_VERIFY, false, sharedPreferences));
 
         settingsList.add(new BooleanSetting("Не показывать вспомогательные диалоги", "При включении данной настройки не будут показываться вспомогательные диалоги (например, при неудачном подключении к серверу)", IS_HIDE_DIALOGS, false, sharedPreferences));
         settingsList.add(new SelectableValueSetting("Скрывать видео загрузки", "Скрывает видео загрузки. Функция работает вне от значения настройки при заходе на кастомный сервер.", VIDEO_HIDE_STEP, 0, MapsKt.mapOf(TuplesKt.to(0, "Не скрывать"), TuplesKt.to(1, "Сразу"), TuplesKt.to(2, "При подключении")), sharedPreferences));
