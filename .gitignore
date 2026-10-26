@@ -11,11 +11,6 @@ native/obj
 native_decompiler/obj
 *.apk
 
-# Ignore native source code (don't use my patterns)
-native/jni/monetloader.cpp
-native/jni/monetloader.h
-native/jni/Android.mk
-
 # Ignore trash
 __pycache__/
 classes_arzmod/out/
